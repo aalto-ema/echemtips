@@ -11,7 +11,7 @@ Use a supported 64-bit CPython. Python 3.11 is recommended for consistency with
 the initial hardware environment.
 
 ```bash
-git clone https://github.com/yerga/echemtips.git
+git clone https://github.com/aalto-ema/echemtips.git
 cd echemtips
 python3.11 -m venv .venv
 source .venv/bin/activate          # Windows: .venv\Scripts\Activate.ps1

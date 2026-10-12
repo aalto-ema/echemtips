@@ -44,8 +44,8 @@ echemtips-picomotor-test = "echemtips.picomotor_test:main"
 echemtips-picomotor-only-test = "echemtips.picomotor_only_test:main"
 
 [project.urls]
-Repository = "https://github.com/yerga/echemtips"
-Issues = "https://github.com/yerga/echemtips/issues"
+Repository = "https://github.com/aalto-ema/echemtips"
+Issues = "https://github.com/aalto-ema/echemtips/issues"
 
 [tool.setuptools.packages.find]
 include = ["echemtips*"]

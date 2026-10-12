@@ -8,9 +8,9 @@ from . import __version__
 from .branding import logo_label
 
 
-DOCUMENTATION_URL = "https://yerga.github.io/echemtips/"
-SUPPORT_URL = "https://github.com/yerga/echemtips/issues"
-REPOSITORY_URL = "https://github.com/yerga/echemtips"
+DOCUMENTATION_URL = "https://aalto-ema.github.io/echemtips/"
+SUPPORT_URL = "https://github.com/aalto-ema/echemtips/issues"
+REPOSITORY_URL = "https://github.com/aalto-ema/echemtips"
 WEC_URL = "https://warwick.ac.uk/fac/sci/chemistry/research/unwin/electrochemistry/wec-spm/"
 PAPER_URL = "https://doi.org/10.1021/acselectrochem.5c00354"
 

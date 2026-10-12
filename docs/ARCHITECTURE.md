@@ -196,5 +196,5 @@ python run_analysis.py --smoke-test
 
 The bitfile checker is a separate explicit step. Physical validation follows
 `REAL_HARDWARE_SETUP.md` and must record exact versions and evidence. See the
-[public contribution guide](https://github.com/yerga/echemtips/blob/main/CONTRIBUTING.md)
+[public contribution guide](https://github.com/aalto-ema/echemtips/blob/main/CONTRIBUTING.md)
 for the review policy.

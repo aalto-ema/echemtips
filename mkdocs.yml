@@ -1,8 +1,8 @@
 site_name: eChemTips
 site_description: Control, analysis, and hardware documentation for scanning electrochemistry
-site_url: https://yerga.github.io/echemtips/
-repo_url: https://github.com/yerga/echemtips
-repo_name: yerga/echemtips
+site_url: https://aalto-ema.github.io/echemtips/
+repo_url: https://github.com/aalto-ema/echemtips
+repo_name: aalto-ema/echemtips
 theme:
   name: material
   features:
