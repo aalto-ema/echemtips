@@ -70,7 +70,17 @@ def build(output: Path) -> None:
     shutil.copy2(ROOT / "scripts/windows_launch.pyw", output / "scripts/windows_launch.pyw")
     for name in ("Setup-Offline.cmd", "Setup-Offline.ps1"):
         shutil.copy2(ROOT / "scripts" / name, output / name)
-    shutil.copy2(ROOT / "docs/WINDOWS_INSTALL.md", output / "READ-ME-FIRST.md")
+    (output / "READ-ME-FIRST.md").write_text(
+        "# eChemTips offline installation for Windows x64\n\n"
+        "Copy this entire folder to a permanent writable local directory, then "
+        "double-click **Setup-Offline.cmd**. After setup, use the desktop shortcuts "
+        "or **Start eChemTips.vbs** / **Start Analysis.vbs**. Test Simulation first.\n\n"
+        "See [the complete installation guide](docs/WINDOWS_INSTALL.md) for "
+        "NI driver requirements, private FPGA bitfiles and troubleshooting. "
+        "Those hardware components are not included. This kit still needs a "
+        "first validation on Windows; it was prepared on the build computer.\n",
+        encoding="utf-8",
+    )
     (output / "docs").mkdir(exist_ok=True)
     shutil.copy2(ROOT / "docs/WINDOWS_INSTALL.md", output / "docs/WINDOWS_INSTALL.md")
     revision = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True).strip()
