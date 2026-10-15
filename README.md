@@ -42,6 +42,10 @@ license). This repository's MIT license does not relicense those materials.
 
 ## Run the simulator
 
+For a new Windows computer, see [Windows installation and offline kit](docs/WINDOWS_INSTALL.md).
+Double-click `Start eChemTips.vbs` or `Start Analysis.vbs` after installation;
+no command-line launch or virtual-environment activation is needed.
+
 Python 3.10 or newer is required. Installing eChemTips installs its PySide6 and PyQtGraph UI dependencies.
 
 ```bash

@@ -18,6 +18,7 @@ env/
 .wec_spm/
 data/
 recordings/
+offline_windows/
 tmp/
 .DS_Store
 .vscode/

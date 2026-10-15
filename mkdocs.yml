@@ -38,6 +38,7 @@ plugins:
               - "!^_"
 nav:
   - Start here: index.md
+  - Windows installation and offline kit: WINDOWS_INSTALL.md
   - Operator guide: OPERATOR_GUIDE.md
   - Adaptive hopping (CV, LSV and I–t): ADAPTIVE_LSV.md
   - Combinatorial scans: COMBINATORIAL_SCANS.md
