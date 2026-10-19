@@ -5,6 +5,15 @@ All notable changes to eChemTips are recorded here. The project follows
 
 ## Unreleased
 
+### SECCM models
+
+- Optional background transient 1D spherical-sector diffusion/Butler–Volmer
+  calculation for CV, LSV, steps, pre-holds and repeated cycles. The analytical
+  calculator remains available. Added current/potential/time views, a synthetic
+  peak-response example, cancellable jobs, versioned presets and numerical
+  provenance exports. This is advisory fixed-geometry modelling, not full FEM,
+  migration/HER, capacitance, iR compensation or an instrument-control change.
+
 ### Documentation
 
 - Consolidated the public guide into task-based installation, operation, analysis,

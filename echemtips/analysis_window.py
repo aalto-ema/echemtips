@@ -59,7 +59,7 @@ class AnalysisWindow(QtWidgets.QMainWindow):
         self.recent_recordings = RecentRecordings(self, file_menu, self.load_recording)
         self.refresh_files()
         from .seccm_model_dialog import open_model_dialog
-        self.menuBar().addMenu("Models").addAction("SECCM analytical models…",
+        self.menuBar().addMenu("Models").addAction("SECCM models…",
             lambda: open_model_dialog(self, self.source_dataset, self.model_cycles))
         from .about import install_help_menu
         install_help_menu(self)

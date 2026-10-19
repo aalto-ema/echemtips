@@ -41,6 +41,20 @@ window within one potential hold.
         - propose
         - score_lsv
 
+## Advisory transient transport
+
+The numerical calculator solves a fixed effective spherical sector with equal
+Ox/Red diffusivities and a Butler–Volmer boundary. It has no hardware references.
+Programs retain concentration history; the initial uniform state is explicit.
+See [model assumptions and convergence checks](SECCM_MODELS.md).
+
+::: echemtips.seccm_transient
+    options:
+      members:
+        - TransientProgram
+        - potential_program
+        - transient_current
+
 ## Instrument backends
 
 Pages and experiment state machines depend on `InstrumentBackend`. A new

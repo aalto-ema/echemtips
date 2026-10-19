@@ -49,7 +49,7 @@ nav:
   - Analysis:
       - Workflows and exports: ANALYSIS_GUIDE.md
       - Optional scientific tools:
-          - Analytical models: SECCM_MODELS.md
+          - SECCM transport models: SECCM_MODELS.md
           - Experimental area normalization: AREA_NORMALIZATION.md
   - Reference:
       - Settings: SETTINGS_REFERENCE.md
