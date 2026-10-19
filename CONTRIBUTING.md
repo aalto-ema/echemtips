@@ -7,13 +7,14 @@ to energize real outputs.
 
 ## Development setup
 
-Use a supported 64-bit CPython. Python 3.11 is recommended for consistency with
-the initial hardware environment.
+Use a supported 64-bit CPython meeting the package minimum. Keep a commissioned
+hardware environment pinned until a replacement has passed physical verification.
+The [installation guide](docs/INSTALLATION.md) includes Windows commands.
 
 ```bash
 git clone https://github.com/aalto-ema/echemtips.git
 cd echemtips
-python3.11 -m venv .venv
+python3 -m venv .venv
 source .venv/bin/activate          # Windows: .venv\Scripts\Activate.ps1
 python -m pip install --upgrade pip
 python -m pip install -e ".[analysis]"
@@ -112,10 +113,16 @@ analyst, or developer. Lead with the action or contract, give every physical
 quantity a unit, and label unverified hardware statements explicitly. Prefer
 links to source definitions over copying values into multiple documents.
 
-Historical audits must state their date and commit and must not be worded as
-the current capability reference. Current behavior belongs in the README,
-operator guide, data format, settings, architecture, or hardware integration
-documents.
+Keep public instructions hardware-brand-independent while stating exact protocol
+constraints. Instrument-specific worksheets, historical audits and local installer
+notes belong in ignored local documentation, not the published site. Keep one
+canonical explanation per topic and link to it instead of adding a page for
+each small feature. Every public documentation page must appear in the navigation;
+merely removing a page from the menu does not prevent publication or search.
+
+Install `.[docs]` and run `python -m mkdocs build --strict` when changing the site.
+Update the operator guide, recording format or hardware contract when semantics
+change. Do not describe planned capabilities as implemented features.
 
 ## Issues and pull requests
 

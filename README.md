@@ -1,197 +1,76 @@
 # eChemTips
 
-**eChemTips** is an open Python control and analysis interface for scanning electrochemistry instruments. It provides a consistent operator UI for pipette-probe workflows while leaving deterministic, time-critical feedback on the NI FPGA.
+Python control and analysis software for custom scanning electrochemical cell
+microscopy (SECCM) instruments, built around the **WEC-SPM FPGA protocol**.
 
-The current application includes:
+[Documentation](https://aalto-ema.github.io/echemtips/) ·
+[Installation](docs/INSTALLATION.md) ·
+[Report a bug or suggest a feature](https://github.com/aalto-ema/echemtips/issues)
 
-- Watch Current and Watch Position as separate, explicitly started monitors with full-rate recording and stoppable, decimated live views.
-- Standalone cyclic voltammetry with separate raw and CV plots.
-- Standalone approach with contact detection, pause/stop, and optional retract.
-- Approach followed by CV or potential-step current-time acquisition, with optional X/Y prepositioning.
-- Guided electrical preflight and an immersed-pipette characterization workflow with saved JSON reports.
-- Scan hopping with CV or current-time acquisition, serpentine or raster paths, physical-coordinate contact/current maps, square-cell or circular-footprint views, contact-relative Z retraction, and live spacing and duration estimates.
-- Bounded X/Y/Z piezo movement and controlled potential output.
-- Simulation and NI R Series FPGA operation with a compatible target and an explicit channel map.
-- A separate data-analysis UI for eChemTips CSV recordings and identified legacy LabVIEW exports.
+## What can I do?
 
-The simulator requires no laboratory hardware. Real-device support uses the existing compiled FPGA target; eChemTips does not replace FPGA-side feedback or timing logic.
+- Run CV or one-way LSV, approach + voltammetry, scan-rate series and potential-step I–t.
+- Acquire hopping maps, with optional conditioning holds and two-speed Z motion.
+- Explore combinatorial measurement recipes and experimental adaptive spatial sampling.
+- Monitor current/position, move piezos and record full-rate CSV data with JSON metadata.
+- Analyze recordings: cycle selection, smoothing, maps, topography, reference conversion,
+  quantitative selections, publication figures and map movies.
 
-The supported UI on `main` uses PySide6 and PyQtGraph. The final pre-migration Tkinter implementation is preserved in the `tk-legacy` branch and the immutable `tk-v0.1` tag.
+The **simulator needs no instrument**. Its synthetic contact, redox and transient
+signals help test workflows; they are not predictions of experimental performance.
 
-## Origins and reference
+![Control interface](docs/images/control-scan-maps.png)
 
-eChemTips is a Python host/UI based on the workflows and FPGA host protocol of
-**Warwick Electrochemical Scanning Probe Microscopy (WEC-SPM)**, developed at
-the University of Warwick and by its collaborators. It retains the compatible
-FPGA-side program rather than replacing deterministic feedback with Python.
-To request the original software, use the form on the
-[Warwick WEC-SPM page](https://warwick.ac.uk/fac/sci/chemistry/research/unwin/electrochemistry/wec-spm/).
-This is a separate project, not an official Warwick release.
+## Try it
 
-For a detailed description of the underlying instrument and software:
-McKelvey, K.; Edwards, M. A.; Kang, M.; Brunet Cabré, M.; Jones, N. B.;
-Unwin, P. R. **A Look inside a Flexible Open-Source Scanning Electrochemical
-Probe Microscope.** *ACS Electrochemistry* **2026**, *2* (1), 78–91
-(published online December 4, 2025).
-[DOI: 10.1021/acselectrochem.5c00354](https://doi.org/10.1021/acselectrochem.5c00354).
-The paper's Supporting Information, section S7, describes software access.
+Install Python 3.10+ in an isolated environment, then install this checkout:
 
-Original WEC-SPM software and FPGA artifacts are not distributed here and
-remain subject to their own terms (the paper describes an academic-use
-license). This repository's MIT license does not relicense those materials.
-
-## Run the simulator
-
-For a new Windows computer, see [Windows installation and offline kit](docs/WINDOWS_INSTALL.md).
-Double-click `Start eChemTips.vbs` or `Start Analysis.vbs` after installation;
-no command-line launch or virtual-environment activation is needed.
-
-Python 3.10 or newer is required. Installing eChemTips installs its PySide6 and PyQtGraph UI dependencies.
-
-```bash
+```text
+python -m pip install -e .
 python run_echemtips.py
 ```
 
-Or install the project in editable mode:
+Select **Simulation**, connect and run a small experiment. For first installation,
+Windows commands and optional dependencies, follow [Installation](docs/INSTALLATION.md).
+Open analysis from **Analysis → Open analysis app** (F6), or run
+`python run_analysis.py`.
 
-```bash
-python -m pip install -e .
-echemtips
-```
+## Real hardware: compatible interfaces, not a single instrument model
 
-Select **Simulation**, connect, and choose an experiment. Approach and hopping
-workflows place a synthetic surface inside the configured approach span. The
-simulator shows a contact charging spike, low dry-current noise (about 0.15 pA
-RMS), forward/reverse redox peaks for CV, and decaying potential-step transients
-for I–t. Retraction breaks contact. Adaptive maps retain spatially varying
-activity. These are illustrative responses for workflow testing, not predictions
-of your electrolyte, electrode kinetics, contact area or instrument noise.
+The host communicates through `nifpga` and the native NI driver. It requires a
+locally supplied `.lvbitx` compiled for the **exact NI device**, with the supported
+register/FIFO contract, channel assignments and execution semantics. Different
+NI models are not interchangeable merely because they run FPGA code.
 
-For control meanings, experiment sequences, plot interpretation, contact behavior, scan paths, and safe stopping, see the [Operator guide](docs/OPERATOR_GUIDE.md).
+Piezo controllers and current amplifiers need compatible analog interfaces and
+independently verified ranges, sensitivities and polarity. There is no requirement
+to use a particular amplifier or positioner brand. Support for a new combination
+must be established by [commissioning](docs/REAL_HARDWARE_SETUP.md), not assumed.
+The [FPGA contract](docs/HARDWARE_INTEGRATION.md) describes the current limits.
 
-The experimental [Adaptive hopping (CV, LSV and I–t)](docs/ADAPTIVE_LSV.md) workflow adds a
-coarse tilt survey and Bayesian spatial selection, with explicit approvals,
-clearance checks and a decision report. Start in simulation and retain approval
-mode for initial hardware tests.
+**Research software, not a certified safety system.** FPGA initialization can
+change physical outputs. Stop does not guarantee zero potential or disable
+external amplifiers. Prepare the hardware and physical interlocks before connecting.
 
-Use **Settings → Save as defaults and apply** to persist the selected backend, piezo ranges, bitfile, data folder, Current 1/2 sensitivities, command-voltage ratio, and acquisition options. Defaults are stored in the operating system's per-user application-settings folder and load regardless of the directory used to start eChemTips.
+## WEC-SPM foundation and acknowledgements
 
-See the [Settings reference](docs/SETTINGS_REFERENCE.md) for defaults, units, validation limits, persistence locations, and the physical effect of each option.
+eChemTips is a separate project based on the workflows and FPGA host protocol of
+**Warwick Electrochemical Scanning Probe Microscopy (WEC-SPM)**, developed at
+the University of Warwick and by its collaborators. It is not an official Warwick
+release. Request the original platform through the
+[WEC-SPM webpage](https://warwick.ac.uk/fac/sci/chemistry/research/unwin/electrochemistry/wec-spm/).
 
-Recordings are streamed to uniquely named CSV and JSON metadata files in `data/`, or in the directory selected in Settings. The complete data rate is written to disk while plots retain a bounded, decimated display buffer. Standard CSV rows contain measured time, X/Y/Z, E1/E2, i1/i2, and the FPGA line number. Scan recordings additionally contain `scan_pixel`; their ordered pixel-to-row/column/XY mapping is stored once in the JSON sidecar. Per-sample feedback type, redundant row/column values, and non-time-aligned commanded-position snapshots are intentionally omitted to keep long recordings smaller.
+For the underlying platform: McKelvey et al.,
+[A Look inside a Flexible Open-Source Scanning Electrochemical Probe Microscope](https://doi.org/10.1021/acselectrochem.5c00354),
+*ACS Electrochemistry* **2026**, *2*, 78–91. Supporting Information S7 explains
+software access. Original WEC-SPM sources and FPGA artifacts remain under their
+own terms; they are not distributed or relicensed here.
 
-Before each experiment or Watch recording, an optional-details form appears,
-prefilled with the last accepted values. All fields may remain blank: pipette
-barrels/opening diameter, electrolyte, electrodes, amplifier filter, temperature,
-humidity, atmosphere and notes. Hardware run review is integrated into this
-dialog. Reusable defaults can be saved there or via Settings → Saving →
-Experiment details defaults. Each JSON keeps its own operator-entered snapshot;
-opening diameter does not imply droplet footprint or change normalization.
-Acquisition/calibration settings and software version are captured automatically;
-plot styling is excluded. These settings remain those captured at recording start.
+## Development and license
 
-The versioned column definitions, units, recording states, partial-file behavior, scan-grid structure, and line-number limitations are specified in [Recording data format](docs/DATA_FORMAT.md).
+See [Contributing](CONTRIBUTING.md), [Architecture](docs/ARCHITECTURE.md) and
+[CHANGELOG](CHANGELOG.md). Run `python -m unittest discover -v` and the control
+and analysis smoke tests before proposing changes. Passing simulation/fake-device
+tests does not qualify real hardware.
 
-Approach thresholds are entered in pA in the operator UI. The operator selects Current 1 or Current 2, an absolute threshold, and whether contact occurs above or below it. Once the FPGA detects contact, Python safely ends the approach and automatically continues to settling, CV, I–t, or retract. A selectable post-contact settling hold (including zero) runs on the FPGA. Every approach-based page includes a dedicated **Accept current Z as contact and continue** action for intentional manual acceptance; the global **End waypoint** control only advances the active FPGA waypoint and is not contact confirmation. Each approach page shows both the latest approach curve and a rolling 60-second current-versus-Z history. Long scan traces use the same 60-second display window while the recorder continues to preserve the complete acquisition.
-
-For hopping scans, **Initial approach Z** is an absolute position used only before the first hop. **Retract distance from contact** is a positive distance: after each confirmed contact at Z, the next retract target is calculated away from the surface by that distance. Raster scans add **Raster flyback extra retract** at the end of each line before the longer X flyback.
-
-## Analyze data
-
-```bash
-python run_analysis.py
-```
-
-Open analysis independently, or use **Analysis → Open analysis app** (F6) in
-control. The [analysis workbench](docs/ANALYSIS_GUIDE.md) provides arbitrary-channel
-exploration, hop/CV selection, time-window statistics and charge, reference
-overlays, physical hop maps and direction-specific CV-current maps. Full-resolution
-data stay separate from display reduction; derived exports include analysis recipes.
-
-Optional TDMS import is available for files with identified and scaled channels:
-
-```bash
-python -m pip install -e ".[analysis]"
-```
-
-## Connect to an NI FPGA
-
-The compiled `.lvbitx` target is deliberately **not included in this public repository**. On the instrument computer, obtain the target image through the instrument owner and select it in Settings or pass it to the hardware checker.
-
-Install the NI software supported by the device and the Python FPGA dependency:
-
-```bash
-python -m pip install -e ".[fpga]"
-python run_hardware_check.py --bitfile "/path/to/target.lvbitx"
-python run_hardware_check.py --bitfile "/path/to/target.lvbitx" --connect --resource RIO0
-```
-
-The host is protocol-based, not tied to a bitfile filename or one NI model.
-USB-7856R is the hardware used during development and reported real-device
-trials. Other R Series devices (for example 7852R or 7855 variants) are
-candidates, not yet verified hardware configurations: they need a bitfile
-compiled for the exact device, preserving the same WEC-SPM interface **and
-execution semantics**, and staged commissioning. A USB bitfile cannot simply
-be renamed or reused on a PCIe/PXI device. Metadata checks alone cannot prove
-behavioral compatibility; see [the target contract](docs/HARDWARE_INTEGRATION.md).
-
-Choose your `.lvbitx` in Settings and save defaults, or set `ECHEMTIPS_BITFILE`
-as the default for a new configuration. Existing saved settings take precedence.
-No private archive is searched and no particular filename is required.
-The common logical channel map is:
-
-- AO0, AO1, AO2: X, Y, Z piezo commands
-- AO3, AO4: Voltage 1 and Voltage 2
-- AO5, AO6, AO7: reserved and unused (no picomotor control)
-- AI0, AI1, AI2: measured X, Y, Z piezo positions
-- AI3, AI4: Current 1 and Current 2 amplifier outputs
-- AI5, AI6, AI7: unused
-- FPGA-side approach feedback and waypoint execution
-
-Before enabling actuators, follow [the real-hardware commissioning guide](docs/REAL_HARDWARE_SETUP.md) and [calibration procedure](docs/CALIBRATION.md). Verify the bitfile target, register/FIFO contract, wiring, polarity, scaling, travel, current-amplifier sensitivity, and physical interlocks on the specific instrument. Use the [hardware troubleshooting guide](docs/TROUBLESHOOTING.md) for symptom-based diagnosis and conservative recovery.
-
-The host supports reusable execution ownership, state reporting, framed contact transitions, safe cancellation with stream retirement, FIFO streaming/refilling beyond the target's initial FIFO capacity, pause/resume, complete-frame acquisition, display-only decimation, waypoint compilation, and Current 1/2 contact feedback. See the [hardware integration](docs/HARDWARE_INTEGRATION.md) and [shared host services](docs/SHARED_HOST_SERVICES.md) documentation.
-
-An advanced custom host adapter can be selected with `ECHEMTIPS_DRIVER_MODULE`. For backward compatibility, `WECSPM_DRIVER_MODULE` is also recognized when the new variable is unset.
-
-## Safety
-
-This is research control software, not a certified safety system.
-
-- Opening the UI does not send an output.
-- Real sessions configure the target while externally paused.
-- Position, potential, calibration, feedback, and timing settings are validated before submission; potential commands require FPGA execution and applied-output acknowledgement.
-- Contact-gated methods do not begin surface electrochemistry after an end-of-travel event.
-- Normal stop waits for target acknowledgement and drains remaining data.
-- Emergency stop latches the active driver; reconnection/reinitialization is required.
-- Software checks do not replace a physical emergency stop, safe amplifier state, travel limits, or instrument commissioning.
-
-## Tests
-
-```bash
-python -m unittest discover -v
-python run_echemtips.py --smoke-test
-python run_analysis.py --smoke-test
-```
-
-The suite covers settings, simulation dynamics, experiment state machines, recording, acquisition backlog/drain behavior, waypoint scaling and streaming, FPGA protocol validation, hardware fault paths, data analysis, and UI workflows.
-
-## Architecture
-
-See the [Architecture and extension guide](docs/ARCHITECTURE.md) for runtime data flow, experiment lifecycle, ownership rules, extension steps, and test boundaries. Contributors should also read [CONTRIBUTING.md](CONTRIBUTING.md).
-
-- `echemtips/ui.py`, `qt_common.py`: PySide6 operator interface and PyQtGraph rendering
-- `echemtips/experiments.py`: device-independent experiment state machines
-- `echemtips/backends.py`: simulator and NI-FPGA backend boundary
-- `echemtips/host.py`, `waypoints.py`: shared host services and waypoint compiler
-- `echemtips/ni_driver.py`, `ni_protocol.py`: deployed FPGA host protocol
-- `echemtips/acquisition.py`, `data.py`: full-rate acquisition and persistence
-- `echemtips/analysis.py`, `analysis_window.py`, `legacy_data.py`: Qt analysis UI and validated legacy import
-
-The historical LabVIEW project, compiled FPGA binaries, local settings, and experimental data are intentionally excluded from this repository.
-
-The [documentation index](docs/index.md) groups operator, hardware, data-analysis, developer, and historical references by audience. Release history and the evidence-based compatibility matrix are in [CHANGELOG.md](CHANGELOG.md) and [Releases and compatibility](docs/RELEASES.md).
-
-## License
-
-[MIT](LICENSE)
+[MIT](LICENSE). Private bitfiles, instrument settings and recordings are excluded.

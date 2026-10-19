@@ -75,14 +75,14 @@ def build(output: Path) -> None:
         "Copy this entire folder to a permanent writable local directory, then "
         "double-click **Setup-Offline.cmd**. After setup, use the desktop shortcuts "
         "or **Start eChemTips.vbs** / **Start Analysis.vbs**. Test Simulation first.\n\n"
-        "See [the complete installation guide](docs/WINDOWS_INSTALL.md) for "
+        "See [the public installation guide](docs/INSTALLATION.md) for "
         "NI driver requirements, private FPGA bitfiles and troubleshooting. "
         "Those hardware components are not included. This kit still needs a "
         "first validation on Windows; it was prepared on the build computer.\n",
         encoding="utf-8",
     )
     (output / "docs").mkdir(exist_ok=True)
-    shutil.copy2(ROOT / "docs/WINDOWS_INSTALL.md", output / "docs/WINDOWS_INSTALL.md")
+    shutil.copy2(ROOT / "docs/INSTALLATION.md", output / "docs/INSTALLATION.md")
     revision = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True).strip()
     dirty = bool(subprocess.check_output(["git", "diff", "HEAD", "--", "echemtips", "pyproject.toml"], cwd=ROOT))
     payload = sorted(p for p in output.rglob("*") if p.is_file())

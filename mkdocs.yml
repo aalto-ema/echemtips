@@ -37,35 +37,26 @@ plugins:
             filters:
               - "!^_"
 nav:
-  - Start here: index.md
-  - Windows installation and offline kit: WINDOWS_INSTALL.md
-  - Operator guide: OPERATOR_GUIDE.md
-  - Adaptive hopping (CV, LSV and I–t): ADAPTIVE_LSV.md
-  - Combinatorial scans: COMBINATORIAL_SCANS.md
-  - Pre/post measurement holds: CONDITIONING.md
-  - Two-speed Z motion: MOTION_PROFILES.md
-  - Standalone Z picomotor tester: PICOMOTOR_TEST.md
-  - Interface tour: USER_INTERFACE.md
-  - UX acceptance checklist: UX_TEST_CHECKLIST.md
-  - Analysis workbench: ANALYSIS_GUIDE.md
-  - Analysis figures and reference scales: ANALYSIS_EXPORTS.md
-  - Experimental landing areas: AREA_NORMALIZATION.md
-  - Branding and optional integrations: BRANDING.md
-  - SECCM analytical models: SECCM_MODELS.md
-  - Settings: SETTINGS_REFERENCE.md
-  - Terminology: GLOSSARY.md
-  - Data format: DATA_FORMAT.md
-  - Real hardware:
-      - Commissioning: REAL_HARDWARE_SETUP.md
+  - Getting started:
+      - Overview: index.md
+      - Installation and simulation: INSTALLATION.md
+  - Operating an instrument:
+      - Hardware setup: REAL_HARDWARE_SETUP.md
       - Calibration: CALIBRATION.md
+      - Experiments and controls: OPERATOR_GUIDE.md
+      - Advanced scans: ADVANCED_SCANS.md
       - Troubleshooting: TROUBLESHOOTING.md
-      - FPGA integration: HARDWARE_INTEGRATION.md
-      - Shared host services: SHARED_HOST_SERVICES.md
+  - Analysis:
+      - Workflows and exports: ANALYSIS_GUIDE.md
+      - Optional scientific tools:
+          - Analytical models: SECCM_MODELS.md
+          - Experimental area normalization: AREA_NORMALIZATION.md
+  - Reference:
+      - Settings: SETTINGS_REFERENCE.md
+      - Recording format: DATA_FORMAT.md
   - Developers:
-      - Architecture and extensions: ARCHITECTURE.md
-      - Python API reference: API_REFERENCE.md
-      - Releases and compatibility: RELEASES.md
-  - Historical notes:
-      - Hardware-operation gaps: history/2026-09-hardware-operation-gaps.md
-      - LabVIEW-parity gaps: history/2026-09-labview-parity-gaps.md
+      - Architecture: ARCHITECTURE.md
+      - FPGA contract: HARDWARE_INTEGRATION.md
+      - Python API: API_REFERENCE.md
+      - Optional controller-specific tester: PICOMOTOR_TEST.md
 strict: true

@@ -6,7 +6,7 @@ root = files.GetParentFolderName(WScript.ScriptFullName)
 python = root & "\runtime\pythonw.exe"
 If Not files.FileExists(python) Then python = root & "\.venv\Scripts\pythonw.exe"
 If Not files.FileExists(python) Then
-    MsgBox "Run Setup-Offline.cmd first (offline kit), or install the project into .venv. See docs/WINDOWS_INSTALL.md.", vbExclamation, "eChemTips setup required"
+    MsgBox "Install the project into .venv. See docs/INSTALLATION.md. Local offline kits have their own setup instructions.", vbExclamation, "eChemTips setup required"
     WScript.Quit 1
 End If
 shell.CurrentDirectory = root

@@ -68,5 +68,25 @@ class DocumentationTests(unittest.TestCase):
         self.assertIn("recording schema version 2", text.casefold())
 
 
+class PublicDocumentationScopeTests(unittest.TestCase):
+    """Guard the smaller public site against accidental local-note publication."""
+
+    def test_every_public_page_has_a_navigation_entry(self) -> None:
+        """Avoid forgotten pages remaining published outside the task-based menu."""
+        config = (ROOT / "mkdocs.yml").read_text(encoding="utf-8")
+        linked = set(re.findall(r":\s+([A-Za-z0-9_./-]+\.md)\s*$", config, re.MULTILINE))
+        actual = {p.relative_to(ROOT / "docs").as_posix() for p in (ROOT / "docs").rglob("*.md")}
+        self.assertEqual(actual, linked)
+
+    def test_public_guides_are_not_local_instrument_instructions(self) -> None:
+        """Keep site-specific amplifier, piezo and installer notes out of public guides."""
+        documents = [ROOT / "README.md", ROOT / "CONTRIBUTING.md", ROOT / "CHANGELOG.md"]
+        documents.extend((ROOT / "docs").rglob("*.md"))
+        pattern = re.compile(r"NanoDrive|Nano-3D|Mad\s*City|VA[-– ]?10M|\bNPI\b|USB-7856R|WINDOWS_INSTALL\.md|Start eChemTips\.vbs", re.IGNORECASE)
+        for document in documents:
+            with self.subTest(document=document.name):
+                self.assertIsNone(pattern.search(document.read_text(encoding="utf-8")))
+
+
 if __name__ == "__main__":
     unittest.main()

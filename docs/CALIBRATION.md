@@ -69,7 +69,7 @@ change tolerances after seeing a discrepancy merely to make the test pass.
 The configured ratio `R` means:
 
 ```text
-AO3 voltage = requested E1 × R
+AO3 voltage = polarity factor × requested E1 × R
 maximum requested |E1| = 10 V / R
 ```
 
@@ -88,16 +88,17 @@ To determine and verify it:
    UI's calculated requested-E1 limit.
 
 Example: when an external ±2 V E1 span is intentionally mapped to the NI
-±10 V command span, `R = 5`. A requested +1 V E1 produces +5 V on AO3. This is
-an example, not evidence that every VA-10M revision/configuration uses that
-mapping.
+±10 V command span, `R = 5`. A requested +1 V E1 produces +5 V on AO3 in
+Instrument-native mode, or −5 V in IUPAC mode. The polarity factor is +1
+or −1 respectively. This is an example, not a default for all amplifiers;
+verify the actual controller's command interface and electrode wiring.
 
 ## Current amplifier sensitivity
 
 Enter sensitivity as amplifier output volts per nanoampere:
 
 ```text
-current (nA) = AI voltage (V) / sensitivity (V/nA)
+current (nA) = polarity factor × AI voltage (V) / sensitivity (V/nA)
 ```
 
 For each connected current channel:
@@ -173,15 +174,15 @@ For the selected channel and amplifier configuration:
 1. Measure stationary baseline, RMS/peak-to-peak noise, and drift with Guided
    preflight.
 2. Verify whether physical contact moves current upward or downward.
-3. Select an absolute threshold and comparison direction that cannot already be
-   satisfied by normal baseline variation.
+3. Select a current-magnitude threshold that cannot already be satisfied by
+   normal baseline variation. Test both positive and negative excursions.
 4. Test with a dummy or sacrificial configuration over a short, conservative Z
    interval.
 5. Verify automatic crossing, no-contact end-of-travel, manual acceptance,
    settling, and retract independently.
 
 The suggested Δi value in the preflight report is diagnostic guidance. The
-current operator pages use a simple absolute Current 1/2 threshold. A future
+current operator pages use a simple magnitude Current 1/2 threshold. A future
 change to expose baseline-relative contact must be separately documented and
 commissioned; do not assume the suggested Δi is automatically applied.
 

@@ -179,9 +179,30 @@ repeating it in every high-rate CSV row.
 Analysis calculations belong in `analysis_core.py` or another UI-independent
 module. The Qt window should select inputs and render results, not define the
 scientific extraction algorithm. Reject ambiguous/incomplete data explicitly.
-See [Analysis workbench](ANALYSIS_GUIDE.md#add-support-for-another-experiment)
+See [Analysis guide](ANALYSIS_GUIDE.md) and the [API reference](API_REFERENCE.md)
 for the provider contract. The control launcher starts a separate analysis process;
 analysis does not share or own an instrument session.
+
+Register an `AnalysisProvider` explicitly before constructing the analysis window:
+
+```python
+from echemtips.analysis_tools import AnalysisProvider, Selection, register_provider
+
+def subsets(dataset):
+    # Replace with validated method-specific extraction; preserve timestamps.
+    return [Selection("New method", dataset.rows, "Explicit scientific scope")]
+
+register_provider(AnalysisProvider(
+    key="new_method", title="New method",
+    supports=lambda dataset: "new_signal" in dataset.columns,
+    extract=subsets,
+))
+```
+
+Provider keys must be unique. Return named selections backed by `NumericRows`;
+do not mutate source data, infer ambiguous phases or access Qt/hardware there.
+Add numerical, partial-recording and UI tests. The application does not execute
+plugins discovered beside an opened data file.
 
 ## Test boundaries
 

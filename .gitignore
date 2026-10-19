@@ -19,6 +19,7 @@ env/
 data/
 recordings/
 offline_windows/
+local_docs/
 tmp/
 .DS_Store
 .vscode/

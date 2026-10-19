@@ -1,220 +1,211 @@
-# Analysis workbench
+# Analysis guide
 
-For selected-plot CSV export, editable publication figures, XY cropping and
-reference-electrode conversion, see [Analysis exports and reference scales](ANALYSIS_EXPORTS.md).
-The page includes a step-by-step acceptance checklist.
+Analysis is independent of the instrument and never sends FPGA commands or
+rewrites original acquisition files. Keep the CSV and matching JSON together.
 
-For advisory limiting currents, ideal step transients and steady-state kinetic
-waves, see [SECCM analytical models](SECCM_MODELS.md).
+## Open and select data
 
-For cycle-resolved CV maps, E–t/i–t views and MP4 map animations, see
-[CV views and map movies](MAP_MOVIES.md).
+Use **Analysis → Open analysis app** (F6), **Analyze last saved recording**, or
+`python run_analysis.py`. Drag-and-drop and **Recent recordings** also open files.
+Legacy TDMS requires the optional analysis extra; arbitrary legacy columns are
+not automatically assumed to be calibrated electrochemical signals.
 
-The analysis app is independent of the instrument connection. It never sends
-FPGA commands or modifies the original recording. No additional libraries are
-needed for eChemTips CSV/JSON files; install `.[analysis]` for legacy TDMS import.
+Imports run in the background. The header shows recording status; partial runs
+remain useful for raw inspection but may have fewer complete programs.
+**Show / hide file browser** gives plots more width.
 
-Dense traces use display-only extrema-preserving reduction and fast segmented
-line rendering. Measurements and exports still use full-resolution samples.
-Contiguous hop selections share the underlying read-only numeric array rather
-than copying each hop. Imports run in a background worker; very large recordings
-still require sufficient RAM (this is not an out-of-core file viewer).
+Explore **Whole recording**, **Recorded hops** or **Complete CV cycles**, then
+choose X/Y channels. Unknown numeric fields retain source names without invented
+units. Select a combinatorial **Condition** before processing/comparing protocols.
+Marker landings and invalid adaptive results are excluded from derived selections.
 
-## Optional current smoothing
-
-Select **Smooth currents**, choose **Savitzky–Golay** (the default), an odd
-window size and polynomial order, then press **Apply**. Start with 11 samples
-and order 2; the order must be smaller than the window. **Moving average** remains
-available as an alternative. Both methods affect current channels consistently
-in Explore/measure, CVs, peak summaries, the numeric table, and current-based hop
-maps (including current at a selected potential). It does not smooth potentials
-or positions, or change CV identification. Uncheck it and press Apply to restore
-the originals. Applying again always starts from original data, not an already
-filtered trace. Processing runs in the background; the existing views remain
-active until the new result is ready. The header identifies applied smoothing.
-
-The window counts samples, not seconds. Start with 5–11 samples; use acquisition
-interval and scan rate to assess how much potential/time range that spans.
-Large windows can suppress real peaks and change peak currents, charge estimates,
-and map values. This is a derived analysis, not a noise-free measurement.
-Savitzky–Golay uses [SciPy's polynomial filter](https://docs.scipy.org/doc/scipy/reference/generated/scipy.signal.savgol_filter.html)
-with polynomial edge interpolation. For short segments, the window is reduced
-to the largest fitting odd size; if it cannot exceed the selected order, that
-segment stays unchanged. Moving averages use available samples at segment edges.
-Invalid values remain gaps. Filtering is in sample index, assuming approximately
-uniform acquisition spacing; it does not resample irregular timestamps or fit
-against potential. Savitzky–Golay can overshoot or produce ringing near spikes;
-compare against original data before interpreting features.
-Filtering does not cross hop/waypoint changes, non-increasing timestamps,
-extracted CV boundaries or E1 sweep reversals. It is temporal smoothing of current,
-**not spatial smoothing between map pixels**.
-
-Source files are never rewritten. Trace, map, and separated-CV exports include
-the processing method, sample window, polynomial order (where applicable), edge
-handling and channel list in their JSON sidecars.
-Reprocessing clears a pinned reference to avoid retaining an outdated version.
-Full-resolution smoothed data require an additional numeric array in memory.
-
-SciPy is a required dependency. After updating an existing installation, run
-`python -m pip install -e .` in the activated project environment to install it.
-
-## Launching
-
-- In control, choose **Analysis → Open analysis app**, or press **F6**.
-- **Analysis → Analyze last saved recording** opens the last finished recording
-  from the current control session. It is unavailable while recording.
-- Independently: `python -m echemtips.analysis [recording.csv]`.
-- Optionally add `--data-folder PATH` to set the recording browser folder.
-
-Control launches analysis in a separate process using the same Python environment.
-You can close either app independently. Keep large analyses off the acquisition
-computer if CPU or memory pressure could interfere with instrument use.
-
-Choose a file or folder, filter the browser by name, and select a recording.
-Imports run in a background worker; a newer selection supersedes older results.
-The header shows the source's completion status. Aborted recordings remain valid
-for raw-data inspection but may contain fewer complete CVs or visited hops.
-**Show / hide file browser** gives plots more width on a laptop.
+Dense traces use display-only extrema-preserving reduction. Quantitative
+calculations and exports use full-resolution arrays. Loading is not out-of-core:
+large files and processed copies can still exceed available RAM.
 
 ## Explore and measure
 
-1. Choose **Whole recording**, **Recorded hops**, or **Complete CV cycles**.
-   Available scopes depend on the data, not the experiment's name.
-2. Select a hop or cycle, then choose X and Y channels. Examples:
-   - `Elapsed time` versus `Current 1`: chronoamperometry/current history.
-   - `Measured Z` versus `Current 1`: current–position relationship.
-   - `Potential E1` versus `Current 1`: voltammogram of a selected complete CV.
-   - `Elapsed time` versus `Measured Z`: position history.
-3. **Time range / baseline** selects an inclusive range using the recording's
-   elapsed timestamps, not a clock restarted at each hop. Leave both limits
-   blank to include all samples. The baseline is a constant subtracted in the
-   native Y-channel unit (nA for current), regardless of displayed current units.
-4. Inspect sample count, mean, population standard deviation, extrema and their
-   X coordinates. These are raw/sample statistics, not fitted electrochemical peaks.
-5. For current, inspect **signed charge**, calculated by trapezoidal integration
-   against recorded time: nA × s = nC. Changing X to potential does not change
-   the integration variable. The selected interval is not interpolated at its
-   endpoints. A negative value represents net cathodic charge only for verified
-   IUPAC-polarity recordings. Check the convention shown beside the dataset name;
-   old native-polarity eChemTips files have the opposite interpretation for the
-   WEC-SPM wiring. Analysis retains file values and never silently flips signs.
+**Time range / baseline** uses recorded elapsed time, not a clock reset per hop.
+Blank bounds select all samples. The baseline is a constant in the native Y
+unit (nA for current), regardless of the display unit.
 
-Calculations use full-resolution data. Invalid samples break charge integration;
-the app reports excluded samples and integrated duration. Decreasing timestamps
-are rejected rather than silently reordered. Unknown numeric channels are exposed
-with their source names; the app does not invent their units.
+Statistics include sample count, mean, population standard deviation and extrema.
+Current charge is signed trapezoidal integration against recorded time:
+nA × s = nC. Changing the X plot channel does not change that integration variable.
+Invalid data break integration; decreasing timestamps are not silently reordered.
 
-**Compare → Pin this trace as reference** retains a snapshot of the current
-processed trace. Select another hop, cycle or file to overlay it. A reference is
-displayed only when channel identifiers and potential-conversion settings match.
-Statistics and **Export selection** describe the active trace. **Export plotted
-data** also includes visible reference overlays as separate series. Use
-**Clear reference** to release it, or **Reset analysis** to clear the active time
-range and baseline. No automatic smoothing or baseline fitting is applied.
+**Compare → Pin this trace as reference** retains a processed snapshot.
+References with incompatible channels or potential conversion are hidden.
+Reset/clear controls do not alter the recording. Whole-hop current-versus-Z
+includes approach, holds and retract; it is not an automatic approach-only selection.
 
-Whole-hop current-versus-Z includes any recorded motion, holds and retraction.
-It is **not** automatically classified as an approach-only curve. Use an explicit
-time window if phase separation is needed.
+## Voltammetry: cycles, scan rates and branches
 
-## CVs
+The CV tab provides **i vs E**, **E vs t** and **i vs t**. Time starts at zero
+for each selected cycle/sweep. Select/overlay cycles within each landing.
+Scan-rate-series blocks remain distinct even when rate values repeat.
+Only waveform-validated complete programs appear; incomplete data remain in raw views.
+Up to 50 curves are displayed at once; bulk export retains all extracted cycles.
 
-The CV tab separates complete cycles consistent with the saved start/vertex/return
-program. Select one for extrema, or Ctrl/Cmd-click several for overlay. The display
-is limited to 50 selected curves to remain responsive; the cycle export contains
-all extracted cycles. Incomplete cycles remain in the source but are not labelled
-as complete. Choose Current 1 or Current 2 when that channel exists.
+For legacy data, **Set CV program** supplies missing waveform parameters in memory.
+It does not rewrite JSON and must match the real experiment. LSV is a single
+one-way sweep, not an invented reverse cycle.
 
-For legacy data, **Set CV program** can supply missing waveform parameters. This
-only changes the in-memory interpretation and preserves other metadata; it does
-not rewrite the source JSON. Extraction is waveform-based and is not a general
-phase classifier. A malformed or unrelated waveform should be inspected in raw
-data before interpreting a derived CV.
+Potential-dependent maps select channel, potential, **cycle within each hop**
+(or explicit cycle average) and chronological leg. For a
+−0.2 → +0.6 → −0.4 → −0.2 V CV:
 
-## Hop maps
+| Leg | Range |
+| --- | --- |
+| Start → Vertex 1 | −0.2 to +0.6 V |
+| Vertex 1 → Vertex 2 | +0.6 to −0.4 V |
+| Vertex 2 → Start | −0.4 to −0.2 V |
 
-Maps use the physical coordinates in the recording's `scan_grid.pixels` metadata,
-so serpentine acquisition order does not reverse every other displayed row.
-Unvisited cells remain absent; no interpolation across hops or zero-filling is used.
+The first and third legs both increase potential but are different selections.
+Interpolation stays within the chosen leg; unavailable potentials/cycles leave
+blank cells rather than extrapolated or zero currents.
 
-- **Mean / Minimum / Maximum / Std deviation:** statistics over all finite samples
-  in a recorded hop. This includes approach and retract where recorded. In
-  particular, a Z statistic is **not confirmed contact topography**, and a mean
-  current is **not a pulse-only/surface current**.
-- **CV at potential:** select a current channel, potential, and increasing or
-  decreasing E via a chronological segment, and a cycle number (or average).
-  The app interpolates adjacent samples within that segment, never beyond its
-  measured potential range. Missing or
-  incomplete cycles do not contribute. Exported `samples` means contributing
-  cycles in this mode, and finite samples in whole-hop statistics mode.
+## Smoothing
 
-Choose a colormap and click a visited cell to inspect its entire hop in the
-explorer. Recordings lacking trustworthy physical grid metadata show an explanation
-instead of an invented map. No contact/pulse phase is inferred from line numbers.
+Enable **Smooth currents**, select Savitzky–Golay (default) or moving average,
+then Apply. For Savitzky–Golay, begin with 5–11 samples and polynomial order 2;
+the window must be odd and larger than the order.
 
-## Exports and traceability
+Smoothing feeds current traces, tables, summaries, maps and movies. It is temporal,
+not spatial smoothing between pixels. Positions, potentials and cycle identification
+are not smoothed. Apply always starts from original data; disable to restore it.
 
-**Export selection** writes the selected, baseline-adjusted XY samples at full
-resolution, plus JSON containing the source path, size, modification timestamp,
-terminal recording status, selection scope, channels, time bounds, baseline and
-measurement results. **Export map** similarly records its statistic, units,
-potential and direction. Source path/size/time are provenance aids, not a
-cryptographic checksum. The reference overlay is not included in these exports.
+Filters do not cross hop/waypoint changes, extracted cycles, sweep reversals or
+non-increasing timestamps. Short segments use a smaller valid window or remain
+unchanged. Invalid samples stay gaps. The window is in samples, assumes roughly
+uniform spacing and can distort peaks or transients; compare against originals.
+Exports retain the processing recipe. Processing uses additional RAM.
 
-**Export all separated CVs** writes all extracted cycles with pixel/cycle/point IDs
-and source channel columns. Keep the original recording and JSON alongside this
-export to retain the complete instrument context. Derived XY/map exports are not
-intended to be re-imported as acquisition recordings.
+## Maps, cropping and topography
 
-The original recording and its matching JSON cannot be selected as export targets.
-An export failure is reported; inspect both destination files before using a
-partially written export. The source is unaffected.
+Maps use recorded physical XY metadata, not acquisition ordering. Serpentine
+rows are not mirrored. Unvisited cells remain absent, without interpolation.
 
-## Scaling and current limitations
+- Whole-hop Mean/Min/Max/Std include motion and holds; a Z mean is **not** surface height.
+- **CV at potential** uses the selected cycle/leg, as above.
+- **Contact Z (surface estimate)** uses available explicit contact metadata or
+  validated stationary surface programs. Partial-program fallbacks may recover
+  height, but do not certify a complete measurement.
+- A “no usable surface Z” result means no trustworthy contact metadata or resolved
+  stationary surface program was found. Inspect raw traces, JSON and per-hop recipes;
+  apparent scan completion alone is insufficient.
+- Commanded contact Z and measured sensor Z have different meanings; do not mix
+  their offsets/scales in quantitative interpretation.
 
-- Numeric arrays replace persistent per-sample dictionaries; slices share storage.
-- The raw table virtualizes cells and exposes all rows, not a 5,000-row preview.
-- Display reduction retains ordered local X/Y extrema and invalid-data breaks.
-  Measurements and exports never use those reduced display points.
-- Hop grouping and waveform extraction run outside the GUI during import. One
-  import runs at a time, with stale queued selections discarded before reading.
-- Recordings and extracted subsets still reside in memory. This is not an
-  out-of-core database: very large files can exceed available RAM. Later storage
-  adapters can build on the independent selection/calculation interfaces.
+Crop X/Y limits to omit boundary rows/columns. Cropping is reversible, keeps original
+hop IDs/spacing and does not edit source data. Bounds use original piezo coordinates.
 
-Peak fitting, automatic surface-hold segmentation, smoothing, impedance analysis,
-and compensation models are not silently enabled. WEC-AL workflows inspired the
-hop/cycle selection, map and quantitative-analysis design; the implementations
-here use eChemTips' saved schema and independent, tested calculation services.
+**XY from map corner** puts the lower-left outer cell edge at (0,0), also after
+cropping. Cell centres remain half a spacing from the edge; reverse scans are not reflected.
+This option applies to other channels and movie maps too.
 
-## Add support for another experiment
+**Remove tilt** subtracts a plane fitted to usable points within the crop
+(at least three noncollinear sites). It can remove real sample shape and is sensitive
+to outliers. **Topography height** then computes `max(Z) − Z`: the greatest
+contact Z becomes zero height. Cropping/condition selection can change this reference.
 
-Numerical extensions belong in `analysis_tools.py` or another Qt-free module.
-Register an `AnalysisProvider` before constructing the analysis window:
+**3D view…** opens a rotatable snapshot. Faces connect only complete neighbouring
+cells; sparse maps remain points rather than an invented surface. Vertical
+exaggeration is for display. Map exports retain origins, plane and height settings.
 
-```python
-from echemtips.analysis_tools import AnalysisProvider, Selection, register_provider
+## Potential-reference conversion
 
-def subsets(dataset):
-    # Replace with a validated method-specific selection, retaining timestamps.
-    return [Selection("New method", dataset.rows, "Explicit scientific scope")]
+**Potential reference…** optionally transforms E1, not E2 or current signs.
+Confirm the recorded potential polarity; control-app settings do not silently
+reinterpret old files. The raw table retains original values.
 
-register_provider(AnalysisProvider(
-    key="new_method", title="New method",
-    supports=lambda dataset: "new_signal" in dataset.columns,
-    extract=subsets,
-))
-```
+`Eout = sign × Erecorded + Esource(SHE) − Etarget(SHE) + custom offset`
 
-Keys must be unique. Providers receive `AnalysisDataset` and return named
-`Selection` objects backed by `NumericRows`. They must not access Qt widgets,
-mutate source samples, or guess ambiguous phases. Startup registration is explicit;
-the application does not execute plugins found beside a data file. The explorer
-discovers the registered provider automatically. Add numerical tests, incomplete
-recording tests and a UI test for each new provider.
+Here sign is +1 for recorded IUPAC potential, −1 for native WEC-SPM potential.
+Nominal aqueous references at 25 °C are SHE (0 V), RHE (−0.05915935 × pH V),
+saturated-KCl Ag/AgCl (+0.197 V), 3 mol/L-KCl Ag/AgCl (+0.207 V) and SCE (+0.241 V).
+A custom additive offset/reference name can be used instead; positive offset adds.
 
+A pipette Ag/AgCl quasi-reference is not automatically a saturated-KCl reference.
+Prefer experimental calibration where needed. Junction potentials, temperature
+dependence, drift, nonaqueous scales and resistance drop are not corrected.
+See [reference-electrode values](https://www.metrohm.cn/content/dam/metrohm/shared/documents/fact-sheets/81098050EN.pdf).
 
-## Workspace improvements and testing
+Converted waveform endpoints, map potentials and movie axes remain consistent.
+**Set CV program** still edits the original scale. Conversion starts from originals,
+not already shifted data. Save an analysis session to retain choices for a file.
 
-See the [UX acceptance checklist](UX_TEST_CHECKLIST.md) for presets, workspace
-controls, analysis sessions, original/processed data, and step-by-step checks.
-The checklist also identifies partial features and current limitations.
+## Plot data and figure exports
+
+**Plot → Export plotted data as CSV…** exports full-resolution values for the
+displayed series, including visible references/original overlays. Its long-form
+columns are series ID/name, sample, x and y; labels/units are in a JSON sidecar.
+Panning alone does not select data: use an explicit time interval.
+
+**Export selection…** saves only the active quantitative selection.
+**Export map…** saves selected cells and the map recipe.
+**Export all separated CVs…** exports every extracted cycle, beyond the display
+cap; it is hidden without valid voltammetry programs. These are derived products,
+not replacements for acquisition CSV/JSON.
+
+Use **Plot → Export figure…** for traces or the map's **Export figure…**.
+The dialog snapshots the selection without changing live formatting:
+
+1. Edit title, axis/colour-bar labels and units (for example pA → nA or V → mV).
+   Unit selection rescales values, ticks and limits—not just label text.
+2. Set physical width/height in mm, independent of window shape. Start around
+   85 × 65 mm for one column, or 150 × 110 mm for a larger panel.
+3. Choose fonts, point sizes, line width and legend. Choose an appropriate palette
+   and colour limits for maps; viridis/cividis are useful sequential defaults.
+4. Preview and export PNG/TIFF (default 300 DPI, up to 1200) or vector PDF/SVG.
+   Inspect legibility and the destination journal's requirements.
+
+Maps retain proportional XY geometry, missing cells and crop boundaries. Very long
+vector traces can produce large files. Figure sidecars record formatting,
+processing, units, source and selection. Source recordings are protected from
+being chosen as export targets; inspect both outputs after an export error.
+
+## Map movies
+
+Open **Map movie**, select current channel and frame axis:
+
+- **CV potential:** one chronological leg or **Whole CV**, including both reversals.
+- **CV time:** time from selected cycle start.
+- **I–t time:** time from the surface program's start.
+
+Choose a per-hop cycle or explicit cycle average for CVs, frame count and
+**Every Nth frame** skipping. Whole-CV potential frames retain chronological
+branches, even when a potential occurs more than once. Prepare again after
+selection/data changes. Preparation is bounded to 20 million hop/frame values.
+
+**Movie options…** controls palette, exclusions, FPS, hold per frame and limits:
+
+| Colour mode | Behaviour |
+| --- | --- |
+| Auto | One fixed range estimated across prepared data |
+| Dynamic | Separate limits per frame |
+| Manual | Fixed operator-entered limits |
+
+Automatic range estimation excludes invalid/failed results and uses robust
+handling where possible; it cannot identify every bad landing. Inspect exclusions
+and the prepared range. Dynamic limits can exaggerate weak variations and prevent
+direct colour comparison between frames.
+
+Play/pause, scrub or loop before exporting MP4 (requires `.[movies]`).
+Output FPS and hold time control playback, not instrument sampling. Skipping
+changes which prepared frames are shown. Export a movie map as a still figure
+separately. Movies retain the active crop, processing and coordinate conventions.
+
+## Specialist tools and reproducibility
+
+[Analytical models](SECCM_MODELS.md) provide advisory predicted currents/traces.
+[Footprint normalization](AREA_NORMALIZATION.md) provides experimental detachment-
+based area estimates, calibrated models and current-density processing.
+Neither establishes intrinsic activity or independently validates a landing.
+
+Keep source recordings with derived files and processing recipes. Analysis sessions
+retain supported selections/settings, not a replacement raw recording. Full paths
+in exports can be sensitive; review before sharing.
+
+For new experiment/provider support, see [Architecture](ARCHITECTURE.md) and
+the [API](API_REFERENCE.md). Core analysis must stay independent of Qt and hardware.

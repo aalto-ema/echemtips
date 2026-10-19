@@ -102,7 +102,7 @@ Examples for the command ratio in Instrument-native mode (AO3 signs reverse in I
 | 2:1 | +1 V | +2 V | ±5 V |
 | 5:1 | +1 V | +5 V | ±2 V |
 
-For a VA-10M configuration where its complete ±2 V electrochemical command
+For an amplifier configuration where its complete ±2 V electrochemical command
 span is represented by the NI output's ±10 V span, the intended value is 5:1.
 Verify this on the actual amplifier revision with a meter and controlled load;
 do not choose 5:1 solely from this example. The ratio currently applies to E1/
@@ -191,11 +191,12 @@ Very large buffers increase rendering work during long experiments.
 
 ## Settings deliberately not exposed
 
-The current fixed instrument scope has no lock-in, picomotor, selectable
-instrument-profile, or general advanced-feedback UI. AO5–AO7 and AI5–AI7 are
-unused. The deployed FPGA still owns deterministic feedback execution and uses
-safe internal defaults that Python programs through the supported Current 1 or
-Current 2 approach protocol.
+The standard experiment interface has no lock-in, arbitrary instrument-profile,
+or general advanced-feedback editor. AO5–AO7 and AI5–AI7 are unused. The separate
+coarse-positioner tester is not integrated with ordinary scans. The FPGA owns
+deterministic feedback execution through the supported Current 1 or Current 2
+approach protocol; neutral settings for unused feedback modes do not establish
+physical instrument safety.
 
 ## Validation and change control
 

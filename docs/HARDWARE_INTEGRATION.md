@@ -1,164 +1,118 @@
-# NI-FPGA integration notes
+# FPGA contract and extension boundary
 
-> The native host implementation is now in `echemtips/ni_driver.py`. See
-> `REAL_HARDWARE_SETUP.md` for the instrument-PC procedure. The custom-driver
-> material below is retained for laboratories that change the FPGA interface.
+For instrument operation use [Hardware setup](REAL_HARDWARE_SETUP.md).
+This developer reference explains why hardware-independent documentation does
+not mean arbitrary FPGA/DAQ compatibility.
 
-This document records the boundary between the Python host and the existing WEC-SPM FPGA target. It is intended for the instrument owner who validates a specific workstation; it is not a substitute for a dry-run and oscilloscope check.
+## Device and target requirements
 
-## Compatible target contract
+Supply a `.lvbitx` compiled for the exact NI model, preserving the WEC-SPM
+interface and execution semantics. No particular filename or compilation
+signature is required; retain the signature as provenance. NI-RIO checks whether
+the image can open on the device. Model/transport matching alone is insufficient.
 
-Select a locally supplied `.lvbitx` compiled for the exact NI device. Its
-filename and compilation signature may differ between laboratories and builds.
-Neither is used as a hard-coded allowlist; signatures remain useful identifiers
-in the laboratory commissioning record. Binaries are not distributed here.
+The native implementation in `ni_driver.py` requires:
 
-The reference hardware is USB-7856R, used in development and real-device trials.
-Other NI R Series models are candidates only when the same target behavior can
-be compiled for them. A model-specific rebuild may be necessary; an existing
-USB image is not portable to PCIe/PXI merely because the host protocol matches.
-NI-RIO checks whether the selected compiled image can open on the actual device.
+- Register names, datatypes and control/indicator roles in
+  `ni_protocol.REGISTER_CONTRACT`.
+- `Host_To_FPGA_Positions`: signed I16, host-to-target, depth 8197.
+- `FPGA_To_Host_FIFO`: signed I16, target-to-host, depth 32767.
+- Fourteen-word waypoint/sample framing, assigned channels, feedback types,
+  packed flags, signed line tags and the expected 40 MHz timing/scaling.
+- Compatible startup AO writes, applied-output acknowledgement, waiting states,
+  operator/feedback pause distinction, contact transitions and stop behaviour.
 
-The shared contract includes:
+Depths are checked exactly. Altered framing, channels or semantics require a
+reviewed driver/target adaptation, not guessed aliases. Metadata inspection
+does not verify analogue conversion, timing or physical response.
 
-- The register names, datatypes and control/indicator roles in
-  `REGISTER_CONTRACT` in `echemtips/ni_protocol.py`.
-- `Host_To_FPGA_Positions`: signed I16, host-to-target, 8197 target elements;
-  `FPGA_To_Host_FIFO`: signed I16, target-to-host, 32767 target elements.
-  These capacities are still checked exactly; changing them needs a driver review.
-- Fourteen-word waypoint and sample framing, channel assignments, feedback
-  enums/flags, line tags, biased interval encoding and 40 MHz timing units.
-- The existing analog raw-value scaling, startup AO values, pause/contact/stop
-  semantics and command acknowledgement behavior. Matching XML metadata does
-  **not** establish these behavioral properties.
+## Runtime ownership
 
-For a new model/build, review the compiled FPGA source and device I/O ranges,
-run the offline checker, then commission outputs/readback with actuators
-inhibited, a controlled electrical load, approach/contact and a small scan.
-Do not enable motion based solely on a successful metadata check. If any
-contract or behavior changes, the native adapter needs corresponding changes
-and tests; this is not a generic driver for arbitrary NI FPGA programs.
+- `backends.py` exposes hardware-neutral operations/capabilities to experiments.
+- `host.py` owns execution snapshots and framed FIFO streaming/refilling.
+- `waypoints.py` compiles physical positions, rates, ramps, jumps, holds and feedback.
+- `ni_driver.py` owns one active program, scalers, acknowledgements, refills,
+  line/waiting-state completion, contact gating, final drain and cancellation.
+- `acquisition.py` drains samples off the GUI thread. Recorder input stays
+  full-rate; the UI uses a separate bounded/display-reduced representation.
 
-The offline preflight validates the required register datatypes and whether each is a control or indicator. It also validates each FIFO's signed-I16 datatype, direction, and configured target depth; name-only compatibility is not accepted.
+A feedback-owned pause is not an operator pause. The ordinary approach transition
+uses target feedback rather than repeatedly forcing EndCurrentLine. The driver
+initializes unused proportional/secondary/running-average controls to neutral
+values to avoid inheriting stale target state.
 
-The active connection additionally requires `WaitingForWayPoints` after `Session.run()`. Runtime health checks include the NI FPGA VI state, the target's `Internal Stop` indicator, the `External Stop` control, line-counter consistency, exact FIFO read length, and a physical-duration watchdog for every submitted program.
+The operator experiments primarily use feedback type 0 for programmed motion
+and type 2 for contact-gated advancement. The target's other modes are not
+automatically available merely because their enum values exist in Python.
 
-Important host controls include:
+## Logical channels and conversions
 
-- `External Stop` and `External Pause`
-- `V on Fly` / `Change V on Fly`
-- `V2 on Fly` / `Change V on Fly 2`
-- `Feedback_Threshold`, `FeedBackType`, `GreaterThan`, and the corresponding second-feedback controls
+| Outputs | Inputs |
+| --- | --- |
+| AO0/1/2: X/Y/Z command | AI0/1/2: X/Y/Z measured position |
+| AO3: E1 command | AI3: Current 1 |
+| AO4: E2 command | AI4: Current 2 |
+| AO5–7: unused | AI5–7: unused |
 
-Important readbacks include:
+AI1 is position readback, not a selectable extra current channel. Reserved
+legacy motion flags do not provide general coarse-positioner support.
 
-- `Applied X`, `Applied Y`, `Applied Z`
-- `Applied Voltage`, `Applied Voltage 2`
-- `MeasuredCurrent`, `MeasuredCurrent 2`, `MeasuredCurrent 3`, `MeasuredCurrent 4`
-- `Ext amp`, `Ext Phase`, `LineNumber`, and `WaitingForWayPoints`
+Position scaling uses per-axis maximum and unipolar/bipolar settings. E1 uses
+the selected polarity factor and command ratio; E2 omits that ratio. Current
+uses each positive V/nA sensitivity and polarity factor.
+[Calibration](CALIBRATION.md) defines how to verify these assumptions physically.
 
-## Physical channels
+## Wire format and time
 
-The original user guide maps the breakout box as follows:
+A waypoint consists of fourteen signed-I16 words:
 
-| Channel | Function |
-|---|---|
-| AO0 / AO1 / AO2 | X / Y / Z piezo command |
-| AO3 / AO4 | Voltage 1 / Voltage 2 |
-| AI0 / AI1 / AI2 | X / Y / Z readback |
-| AI3 / AI4 | Current 1 / Current 2 |
-| AI5 / AI6 / AI7 | Unused by eChemTips |
+1. Line/feedback action word.
+2. Five velocity words: X, Y, Z, E1, E2.
+3. Five position words: X, Y, Z, E1, E2.
+4. Position-loop wait, hold timer and packed flags.
 
-The developer guide is internally inconsistent about the electrode outputs: its breakout-box table and ChangeOnFly section use AO3/AO4, while the waypoint table says AO4/AO5. The application keeps AO3/AO4, which also agrees with the existing UI/project mapping. Confirm the physical breakout box during commissioning rather than relying on the stray waypoint-table entries.
+Flag bits 0–8 encode Move X/Y/Z/E1, Jump E1, Hold, Move E2, Jump E2 and
+Hold Feedback 1. Reserved bits 9–10 are not set by standard Python programs.
+The compiler uses power-of-two velocity scalers and a 40 MHz clock; do not
+reimplement quantization separately in experiment pages.
 
-## Native waypoint protocol
+Acquisition also uses fourteen I16 words. Runtime decoding retains position,
+potential, current, feedback, line and timing information. Remaining legacy
+words are not automatically meaningful analysis channels.
 
-Read-only extraction of `WayPointCluster.ctl` found 24 logical arrays:
+The final two biased I16 words join high-first into a **U32 interval in 40 MHz
+ticks**, not an absolute counter. Python accumulates intervals in an unbounded
+integer and sets the first accepted frame to zero. Batch boundaries do not reset
+time; do not apply absolute-counter unwrapping to these interval words.
 
-1. X, Y, Z, V positions
-2. X, Y, Z, V velocities
-3. Feedback type
-4. Move X/Y/Z/V, Jump V, Hold, and Hold Time
-5. V2 position, Move V2, V2 velocity, and Jump V2
-6. Z-feedback update interval and Hold Feedback 1
-7. Z Picomotor move and direction
+CSV is deliberately smaller than the runtime sample: see [Recording format](DATA_FORMAT.md).
+Line numbers assist runtime phase/ownership handling but do not universally
+classify an experiment's scientific phases.
 
-Read-only rendering of `ScaleWayPoints.vi` shows that each waypoint is converted to I16 values and a packed boolean word before it is written to `Host_To_FPGA_Positions`. Position helpers apply range/polarity conversion, velocity helpers convert physical units per second to FPGA increments per tick, and a per-axis power-of-two velocity scaler is written to separate target registers.
+## Startup, completion and stopping
 
-The final frame was traced through the `Build Array` node. Each waypoint is 14 I16 words in this order:
+The [startup outputs](REAL_HARDWARE_SETUP.md#connection-changes-physical-outputs)
+are target behaviour, not something External Pause prevents.
+The driver verifies readiness before claiming a connection.
 
-1. line/feedback action type
-2. X, Y, Z, Voltage 1, and Voltage 2 velocities (five words)
-3. X, Y, Z, Voltage 1, and Voltage 2 target positions (five words)
-4. position-loop wait, hold timer, and packed flags (three words)
+Programs can refill beyond initial FIFO capacity. Completion requires the
+expected acknowledgement/line/waiting state and final acquisition drain—not an
+empty host queue alone. Partial frames, stale/overshot tags and ambiguous target
+state must not silently become successful completion.
 
-Packed flag bits 0–8 are used for Move X, Move Y, Move Z, Move V, Jump V, Hold, Move V2, Jump V2, and Hold Feedback 1. The deployed frame also reserves bits 9–10 for legacy picomotor commands, but eChemTips never sets them. Position and velocity helpers use `2^15`, a 40 MHz clock, and the corresponding `ExpandVelScaller` register. `ni_protocol.py` implements these conversions and `test_ni_protocol.py` verifies the frame and scaling independently of NI-RIO.
+Controlled cancellation can retire the sample stream, requiring reinitialization.
+Emergency Stop does not guarantee zero outputs or physical isolation.
+Do not relax these checks to broaden model compatibility.
 
-The acquisition FIFO is also 14 I16 words per sample. eChemTips decodes X/Y/Z, V1/V2, Current 1/2, feedback type, line number, and timing for runtime control. The deployed FPGA still supplies legacy values in the remaining words, but the Python application intentionally ignores them. The last two biased I16 words are joined high-word first into a U32 **interval in 40 MHz ticks**, not an absolute timestamp. In `FPGA Target.vi`, the acquisition loop subtracts its previous tick reading from the current reading before splitting the difference into the FIFO words. Python accumulates these intervals using an unbounded integer and divides by 40,000,000 to produce `Sample.elapsed_s`, with the first accepted frame at zero. FIFO batch boundaries do not reset time. The FPGA's U32 subtraction already handles a clock rollover between adjacent readings; the host must not apply absolute-counter unwrapping to these intervals. No bitfile change is required.
+## Extending a device or host adapter
 
-The standard recording schema deliberately differs from the complete runtime `Sample`. Every CSV stores measured time, X/Y/Z, V1/V2, Current 1/2, and line number. Only hopping scans add `scan_pixel`. The JSON sidecar declares recording schema version 2, lists the CSV columns, and stores the ordered scan grid once as pixel/row/column/target-X/target-Y records. `feedback_type`, per-sample scan row/column, and commanded X/Y/Z are not serialized. In particular, the current hardware adapter can only read one Applied-X/Y/Z snapshot after receiving a FIFO batch, so repeating that value for every sample would imply timing precision the target does not provide.
+Implement the backend/driver contract with truthful capabilities and one owner.
+An advanced adapter can be selected using `ECHEMTIPS_DRIVER_MODULE`;
+`WECSPM_DRIVER_MODULE` is a legacy fallback. The adapter receives the open
+session; it must not create a competing session or silently download another target.
 
-## Site driver contract
-
-Set `ECHEMTIPS_DRIVER_MODULE` to the import name of a validated local module. The legacy
-`WECSPM_DRIVER_MODULE` name remains a fallback for existing installations. The application calls:
-
-```python
-def create_driver(session, settings):
-    return Driver(session, settings)
-
-
-class Driver:
-    def move(self, axis: str, target: float, speed: float) -> None:
-        # Convert a single physical move to the workstation's confirmed frame.
-        # Write it through session.fifos["Host_To_FPGA_Positions"].
-        ...
-
-    def start_approach_cv(self, parameters) -> None:
-        # Submit positioning and a line-type-2 stop-on-feedback approach.
-        # Submit CV/retract separately only after the FPGA pause and feedback
-        # event are confirmed. Current thresholds arrive in nA and must be
-        # converted to the target's signed-I16 ADC scale.
-        ...
-
-    def approach_cv_status(self) -> dict:
-        # Valid stages: preposition, approaching, contact, cv, retracting,
-        # complete, aborted. Progress is a float from 0 to 1.
-        return {"stage": "approaching", "detail": "...", "progress": 0.2}
-
-    def stop_motion(self) -> None:
-        ...
-
-    def read_samples(self):
-        # Optional: drain FPGA_To_Host_FIFO and return model.Sample objects.
-        # The recorder persists every object; the UI renders only the newest.
-        ...
-```
-
-The driver receives the already-open `nifpga.Session`; it must not download another bitfile or create a second session. The application validates axis, target, speed, voltage bounds, and global calibration before calling it. A driver with only `move()` and `stop_motion()` enables Move Piezo but not Approach + CV.
-
-The bundled driver drains `FPGA_To_Host_FIFO` in batches and records every complete sample frame. A custom driver should do the same through `read_samples()`.
-
-## Shared host services
-
-The native implementation deliberately separates method logic from common host behavior:
-
-- `host.py` owns execution state snapshots, complete-frame FIFO streaming/refilling, and the bounded display buffer.
-- `waypoints.py` compiles physical-unit X/Y/Z/V1/V2 plans, concurrent axis movement, ramps, jumps, holds, relative Z moves, feedback actions, and all deployed flag bits.
-- `ni_driver.py` owns exactly one active program, applies the compiled scalers, services refills, verifies line-count/waiting-state completion, drains final acquisition data, and exposes pause, resume, end-current-line, ChangeOnFly potential, and feedback configuration operations.
-- `acquisition.py` continuously drains the hardware outside Qt rendering. The recorder receives every sample; PyQtGraph plots receive separately decimated buffers that preserve the experiment's first and last points.
-
-Each approach method selects Current 1 or Current 2, a contact threshold, and comparison polarity. The driver writes fixed neutral values to the deployed target's unused secondary/proportional/running-average/bulk registers at initialization and before a method, preventing stale FPGA state from enabling unsupported feedback modes. Contact decisions and Z stopping remain FPGA-resident.
-
-The current application always treats AI1 as Y-position readback. It does not expose the original Current 4 multiplexing mode.
-
-## Commissioning checklist
-
-1. Disconnect the piezo amplifiers and electrode output before the first software test.
-2. Run `run_hardware_check.py` to confirm the target class, bitfile signature, and named interface.
-3. Verify raw-to-voltage polarity and the command-voltage divider using a meter or oscilloscope.
-4. Verify each configured piezo maximum and bipolar/unipolar setting.
-5. Validate one low-speed, short-distance axis move at a time.
-6. Confirm both UI stop and FPGA `External Stop` under motion.
-7. Compare FIFO-decoded data against a short original LabVIEW acquisition before relying on Python files.
-8. Only then enable Approach + CV on a sacrificial or well-separated setup.
+A new target profile needs documented registers/types, frame layout, scaling,
+startup, feedback/stop/acknowledgement semantics and overflow limits, plus
+fake-session tests and physical commissioning. Review channel/voltage differences
+before changing the driver; support for one adapter operation does not imply
+support for every experiment. See [Architecture](ARCHITECTURE.md) and [API](API_REFERENCE.md).

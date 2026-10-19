@@ -6,8 +6,11 @@ approach and a separate USB connection for the Newport 8742. No bitfile changes
 are required. X=port 1 and Y=port 2 are reserved but **never commanded**;
 only Z=port 3 is used. The 8302 moves the linear stage carrying the piezo.
 
-The Newport hardware/DLL path has not yet been verified on a real controller.
-Simulation and fake-device tests do not establish physical safety. Do not leave
+This optional tool is deliberately controller-specific; it is not a hardware
+requirement for ordinary eChemTips operation. USB identification and standalone
+motor motion have been tried on one setup; the combined piezo/motor approach
+still requires site-specific commissioning. Simulation and fake-device tests
+do not establish physical safety. Do not leave
 the first real tests unattended. Stop is a best-effort software command to both
 controllers, not a hardware interlock; lost USB communication can prevent it.
 

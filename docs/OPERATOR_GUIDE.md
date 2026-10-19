@@ -1,344 +1,186 @@
 # Operator guide
 
-## Laptop plot views
+For installation, start with [First simulation](INSTALLATION.md).
+For real instruments, complete [Hardware setup](REAL_HARDWARE_SETUP.md) and
+[Calibration](CALIBRATION.md) before enabling outputs.
 
-Use **Hide setup** on experiment pages to give the live plots more width.
-Paired maps and traces stack vertically on narrow panels; scroll to see the
-second plot. **Expand plots** opens the same live tabs in a maximized window,
-with **Stop experiment** and **EMERGENCY STOP** still available. Use **Return to
-experiment** or close that window to restore the tabs without clearing data.
+## Prepare a session
 
-This guide explains the normal eChemTips workflow and what each experiment
-does. Use Simulation while learning the interface. For a physical instrument,
-complete [Real hardware setup](REAL_HARDWARE_SETUP.md) before enabling any
-positioner or electrochemical cell.
+1. Check the probe, cell, grounding, amplifier gain/filter and mechanical clearance.
+2. In Settings, verify backend, bitfile/resource, piezo ranges, current sensitivity,
+   polarity, potential scaling, acquisition interval and data folder.
+3. Save/apply settings. Hardware-affecting changes require reconnection.
+4. Connect only after reading the startup-output warning and preparing for those outputs.
+5. Check commanded and measured positions separately; readbacks do not prove calibration.
 
-## Before every session
+Opening the application does not connect to hardware. Only one experiment or
+recording owns the instrument at a time. Before recording, the optional details
+form can capture pipette, electrolyte, electrodes, filter, environment and notes;
+blank fields are allowed. Relevant acquisition settings are recorded automatically.
 
-1. Inspect the probe, cell, cables, grounding, amplifier range, and positioner
-   limits. Confirm that an unexpected output change cannot cause a collision or
-   damaging potential.
-2. Open **Settings**, select Simulation or NI FPGA, and verify all ranges,
-   sensitivities, command scaling, bitfile, and data folder.
-3. Press **Save as defaults and apply**. Changing settings disconnects the
-   current backend; reconnect afterward.
-4. Press **Connect**. On NI hardware, read the startup-output warning and
-   proceed only if the instrument has been prepared for the stated outputs.
-5. Verify the persistent bottom readback for X, Y, Z, E1, E2, i1, and i2. A
-   displayed number is not proof of calibration; compare against independent
-   measurements during commissioning.
-6. Run **Guided preflight** when wiring, amplification, electrolyte, or the
-   probe has changed.
+## Navigation and working space
 
-Only one experiment, diagnostic, or independent recording owns the instrument
-at a time. Controls that would create conflicting ownership are disabled.
+**Move piezo**, monitors and commonly used experiments are in the sidebar.
+**All experiments…** searches the complete library, including pinned entries.
+Pin/unpin and reorder favorites there; Settings remains accessible.
+Presets retain measurement parameters, not permission to reuse another instrument's calibration.
 
-## Global controls
+Use **Hide setup** for plot width and **Expand plots** for a larger live view.
+Plot controls, buffers and rolling windows affect display only; recording remains
+full-rate. The selected current units do not change threshold or saved-data units.
+See [Settings](SETTINGS_REFERENCE.md).
 
-| Control | Purpose |
+## Choose an experiment
+
+| Experiment | Purpose |
 | --- | --- |
-| **Connect / Disconnect** | Open or close the selected backend and acquisition worker. Disconnecting an active method stops it and marks its recording aborted. |
-| **Pause** | Ask the FPGA host service to pause execution. The command watchdog excludes an acknowledged pause. It does not replace a physical emergency interlock. |
-| **Resume** | Continue an operator-paused FPGA program. It does not override a pause owned by FPGA feedback logic. |
-| **End waypoint** | Low-level request to finish the current FPGA waypoint. It does **not** confirm surface contact. |
-| **EMERGENCY STOP** | Assert the target stop controls, drain obtainable data, abort the recording, stop acquisition, and disconnect. After a hardware stop, reinitialize and reconnect before sending another command. |
+| Move piezo | Bounded X/Y/Z command at a selected speed; measured and commanded positions remain separate |
+| Watch current / position | Explicitly start a live view or recording; opening a page alone does not begin monitoring |
+| Guided preflight | Zero-current noise, open-input capacitance and known-resistor checks; prepare each fixture yourself |
+| Characterize pipette | Immersed-pipette stability and I–E measurements; model-derived aperture is an estimate |
+| CV / LSV | Voltammetry without an automatic approach |
+| Approach | Contact-gated approach, settling and optional return |
+| Approach + CV / LSV | One landing followed by voltammetry |
+| Approach + CV scan-rate series | One landing, multiple ordered scan rates, then one optional return |
+| Approach + I–t | One landing followed by a repeated potential-step program |
+| Scan hopping + CV / LSV or I–t | Repeat the chosen surface program at grid locations |
+| Combinatorial / Adaptive | Recipe assignment or model-guided locations; see [Advanced scans](ADVANCED_SCANS.md) |
 
-Approach pages additionally provide **Accept current Z as contact and
-continue** while an approach is active. This is an intentional manual contact
-decision: it stops the approach waypoint and starts settling or the next method
-stage. Use it only when the current position is known to be safe.
+## Contact detection
 
-## Watch current
+Select **Current 1** or **Current 2** and a threshold in **pA** (default 5 pA).
+The experiment UI uses **current magnitude**: contact occurs when
+`|i| ≥ |threshold|`, so either a positive or negative excursion can trigger.
+This is not a change-from-baseline criterion. A dry offset/noise already above
+the threshold can cause false contact; inspect the baseline and gain first.
 
-Use this page to observe i1 and i2 or record a time trace without running a
-motion experiment.
+Low-level Python APIs additionally expose signed and baseline-relative modes.
+Do not assume their defaults match the UI's magnitude mode.
 
-- **Apply potentials** commands E1 on AO3 and E2 on AO4. Manual changes are
-  blocked while an experiment owns the outputs.
-- **Start live view** begins plotting only new samples. Merely opening the page
-  does not load or render earlier experiment data.
-- **Start recording** creates a full-rate Watch Current recording and also
-  starts the live view.
-- **Stop and save** drains pending acquisition data before finalizing the file.
-- Each plot shows a rolling 30-second display window. This does not discard
-  samples from an active recording.
+After contact, the approach ends and the selected settling/measurement stage
+begins. Reaching the approach limit **without** contact does not authorize surface
+electrochemistry. **Accept current Z as contact and continue** is an intentional
+operator override while approaching, not an automatic quality check.
 
-## Watch position
+Contact evidence is electrical, not proof of a particular droplet footprint or
+safe physical distance. Confirm behaviour with a controlled signal before a sample.
 
-This opt-in page shows separate rolling 30-second X, Y, and Z position plots.
-**Start live view** affects display only. **Start recording** preserves the
-full-rate measured position and electrochemical channels in the standard
-recording schema. Stop the recording before starting another method.
+## CV, LSV and scan-rate series
 
-## Guided preflight
+**CV:** `Start → Vertex 1 → Vertex 2 → Start`, repeated for the chosen cycles.
+**LSV:** choose **Waveform → LSV** and set Start, End and scan rate; there is
+one sweep, without reverse legs. The endpoint may be above or below Start.
 
-The preflight produces a JSON report rather than an experiment CSV. Run its
-steps in order and prepare the physical fixture described by each button:
+For a scan-rate series, add/remove/reorder rates in V/s. Repeated rates are
+allowed and remain separate rate blocks in analysis. One approach precedes the
+whole series. In LSV series, E1 jumps back to Start between rates; the optional
+reset settling time can reduce—but does not remove—charging effects.
 
-1. **Measure zero-current noise** holds E1 at 0 V and reports mean, peak-to-peak
-   noise, RMS noise, drift, and a conservative suggested Δi threshold.
-2. **Measure open-input capacitance** runs a triangular potential sweep with
-   the amplifier signal input disconnected and estimates stray capacitance.
-3. **Verify with known resistor** sweeps through a stated precision resistor
-   and compares the fitted resistance with the configured value.
+The measurement endpoint remains applied during retraction/completion unless
+an enabled post-hold sets another potential. Completion does not imply zero E1.
 
-The simulator changes its diagnostic fixture internally. Real hardware cannot
-do that: the operator must make and verify each safe circuit before pressing
-the corresponding button. A suggested threshold is a starting point, not an
-automatic guarantee of safe or selective contact detection.
+## I–t
 
-## Characterize pipette
+Set initial, pulse and return potentials and their durations, then the cycle count.
+A duration may be zero. The current-time measurement begins after confirmed
+contact and settling, not when the initial positioning begins.
+Inspect the E–t trace when interpreting current transients.
 
-Prepare an immersed pipette with its normal amplifier connection. Enter a
-traceable pipette ID, electrolyte conductivity, and estimated cone half-angle.
+## Hopping scans and return Z
 
-1. **Measure current stability** holds E1 at the selected potential and reports
-   mean current, noise, and drift.
-2. **Measure I–E response** performs a triangular sweep. Its fitted conductance
-   gives a resistance estimate; resistance, conductivity, and cone angle give
-   an approximate aperture radius.
+Set the XY grid, serpentine or raster path, initial approach Z, approach limit,
+speeds, threshold, settling and electrochemical program. Review the preview and
+known-duration estimate; approach times and hardware overhead can vary.
 
-The conical-pipette model is an estimate and should be recorded as such. Save
-the JSON pipette profile alongside experimental records.
+After contact, the requested retract is away from the surface by the configured
+distance. **It is bounded at Initial approach Z**: if the full distance would go
+past that return boundary, withdrawal stops there rather than failing solely
+because the full distance is unavailable. Subsequent landings approach from the
+reached retract height. Normal scan completion returns to Initial approach Z.
+Single-point methods retain their own retract checkbox.
 
-## Standalone CV
+This bound is not confirmation of droplet detachment or lateral clearance.
+You must choose a return height that clears the entire path. Adaptive scans use
+their own travel policy described in [Advanced scans](ADVANCED_SCANS.md#adaptive-scanning).
+Raster flyback/long-move extra withdrawal does not permit commands outside
+configured travel.
 
-The commanded E1 program is:
+### Orientation marker
 
-`start → vertex 1 → vertex 2 → start`, repeated for the selected cycle count.
+The optional final orientation landing is on by default. It repeats the last
+array measurement recipe at an asymmetric location after successful array completion.
+Automatic placement uses the first X position and one Y spacing beyond the last row;
+with one Y row it uses X spacing. For a single-point grid, specify coordinates
+or disable the marker.
 
-**Jump to start potential** changes how the initial level is reached; the three
-legs of every cycle still use the configured scan rate. The time-domain tab
-shows E1 and Current 1 throughout the run. The voltammogram tab plots completed
-CV data as E1 versus Current 1. The analysis application later separates and
-exports complete cycles using the parameters saved in JSON.
+Meniscus footprint diameter does **not** control placement. Check the preview:
+the marker must be outside the array and within piezo bounds; coordinates are
+not silently clamped. Travel uses the configured long-move extra withdrawal.
+The exported `.orientation.svg` shows planned order/orientation; JSON records
+actual completion. Marker samples remain in recordings but are excluded from
+analysis plots, maps and treatments.
 
-## Standalone Approach
+## Optional holds
 
-The sequence is:
+Expand **Pre/post measurement holds** inside the electrochemistry card; both
+default off. Enable each independently and enter E1 and positive duration
+(up to 300 s, subject to program/tag limits). Collapse the section without
+disabling it; its summary still indicates enabled options.
 
-`optional XY preposition → start Z → approach toward limit Z → contact → settle → optional retract`
+Order: contact → settling → pre-hold → complete measurement → post-hold → retract.
+Holds bracket each landing once; in rate series they bracket the whole series.
+Combinatorial recipes share hold settings. No-contact exits do not run holds.
+Check availability on the page: standalone CV and adaptive configuration do not
+expose the same optional-hold editor.
 
-- Leave Target X or Target Y empty to keep that axis at its present position.
-- Contact uses the selected Current 1 or Current 2 absolute threshold and
-  above/below direction. Thresholds are entered in pA and converted internally.
-- **Approach limit Z** is a travel limit, not evidence of contact. Reaching it
-  without a threshold crossing aborts the contact result.
-- **Settle after contact** may be zero.
-- **Retract after approach** returns to Start Z after confirmed contact.
+The post-hold potential persists during withdrawal and completion. Holds are
+retained in raw traces; measurement-aware analysis excludes them using
+`measurement_phase`. See [Recording format](DATA_FORMAT.md).
 
-The traces show Z and selected feedback current versus time. **Approach curves**
-contains the current approach as current versus Z and a rolling 60-second
-history. The CSV remains full-rate.
+## Optional two-speed Z motion
 
-## Approach then CV
+Expand **Z motion profiles** in the motion setup. Approach and retraction can
+be enabled separately; both default off. XY motion stays constant-speed.
 
-This method performs the same optional XY preposition and contact-gated
-approach, then settles and runs:
+- **Approach:** enter fast/slow rates. Until a usable contact-height prediction
+  exists, motion stays slow. Where available, fast travel ends before predicted
+  contact by the configured clearance (default 5 µm). Contact detection stays active.
+- **Retraction after a distance:** withdraw slowly for that distance, then fast.
+- **Retraction after detected detachment:** remain slow until an attached-current
+  contrast collapses toward the dry baseline; continue slowly through the chosen
+  buffer, then fast. The fixed switch distance is disabled.
 
-`CV start → vertex 1 → vertex 2 → CV start`
+Ambiguous detachment stays slow to the endpoint. Stable potential and measurable
+wet/dry contrast are needed; electrical evidence is not a direct footprint
+measurement. Automatic withdrawal uses completed waypoint segments, so latency
+and stationary gaps can occur. The buffer does not extend the final endpoint.
+In adaptive mode without optional tilt fitting, two-speed approach stays slow.
 
-The sequence repeats for the selected cycle count and optionally retracts to
-Start Z. CV never begins when the approach merely reaches its Z limit. Use the
-CV tab for E1 versus Current 1 and the trace/approach tabs to diagnose motion
-and contact.
+Record profile settings and inspect JSON `motion_events`. Validate rates and
+detachment against physical observations before routine use.
 
-## Approach then I–t
+## Pause, stop and recovery
 
-After optional XY positioning, confirmed contact, and settling, E1 follows:
+| Control | Meaning |
+| --- | --- |
+| Pause / Resume | Operator pause/resume; not permission to override FPGA feedback-owned pauses |
+| End waypoint | Low-level waypoint advance, **not** confirmation of contact; unavailable in adaptive acquisition |
+| Stop experiment | Controlled abort; save partial data and follow reported recovery state |
+| EMERGENCY STOP | Strong stop/disconnect; not a guarantee of zero AO or de-energized amplifiers |
 
-`initial potential/hold → pulse potential/hold → return potential/hold`
+After hardware cancellation, the current stream may be retired and require
+disconnect/reinitialization before another command. The experimental recoverable-stop
+branch is not part of main. Do not assume a stopped scan returns Z to initial
+position: secure the hardware and inspect the reported state.
+Normal completion and stopping are different paths.
 
-The complete three-level program repeats for the selected cycle count. A hold
-may be zero. The I–t tab resets its local time at the surface program and shows
-both E1 and Current 1 versus time. If the Z limit is reached without contact,
-the I–t program does not run. Optional retract returns to Start Z.
-
-## Scan hopping + CV
-
-At every grid point the method approaches, requires confirmed contact, settles,
-runs a complete CV, samples Current 1 near the selected map potential, and
-retracts by a positive distance away from the measured contact Z.
-
-- X/Y start, end, and point count define physical grid coordinates. The page
-  reports X and Y hop spacing.
-- **Serpentine** reverses X order on alternating rows. **Raster** returns to the
-  same X side before the next row.
-- **Raster flyback extra retract** is added only before the longer line return.
-- **Initial approach Z** applies only to the first hop. Later approaches start
-  from contact-relative retract positions.
-- After the final landing (the marker when enabled), both scan methods return Z directly to **Initial approach
-  Z** at **Retract speed**, leaving X/Y at the final pixel. If Z is already
-  farther retracted, it stays there instead of moving toward the surface.
-  The scan stays active and records until that return completes. Intermediate
-  hops still use the requested contact-relative distance. Approach-only,
-  Approach + CV and Approach + I–t retain their existing return/retract options;
-  standalone CV does not move Z. Stop/fault behaviour on the production branch
-  is unchanged and does not automatically return Z.
-- Both hopping CV and hopping I–t allow an initial Z of zero. Retraction is
-  calculated at contact, then limited at **initial Z** and the configured piezo
-  command range. For initial Z = 10 µm and an increasing-Z approach, contact at
-  15 µm with a 10 µm retract results in a target of 10 µm; contact at 80 µm
-  results in 70 µm. The same limit
-  applies to raster flyback extra retraction and, in the opposite direction,
-  to initial Z as the upper withdrawal boundary. Subsequent hops use the bounded retract position.
-- A shortened retract is shown in the scan status and recorded in the JSON
-  `parameters.retraction_events` list, using zero-based `scan_pixel` indices.
-  Entries include contact/target Z, requested/available command travel, and a
-  `no_travel` flag. Hardware calculations use the applied Z output at contact;
-  the sensor Z in the CSV remains a separate measurement. These events describe
-  commanded clearance, not independently verified physical movement.
-- A shortened or zero-distance retract does **not** stop the scan. Once the
-  retract waypoint is complete, move to the next XY location and approach again.
-  The operator must choose initial Z that clears the full region and entry path;
-  reaching that command does not prove meniscus detachment and may permit droplet
-  dragging if clearance is insufficient. Hardware errors and approach limits
-  remain enforced; no FPGA bitfile change is required.
-- The duration estimate includes deterministic CV, settling, lateral, repeated
-  approach, and retract time. It excludes the initial move and first approach.
-- Square cells show the sampled grid; circular footprints show the configured
-  meniscus diameter in physical coordinates. Choose the shared shape and
-  diameter under **Settings → Maps**, not on individual scan pages. These
-  preferences change rendering only, not the scan path or feedback.
-
-**Settings → Maps** also offers independent Z/current colormaps and
-automatic/fixed color limits. **Settings → Plots** contains rolling history
-durations, current display units, font size and trace thickness. The save/apply
-button below the tabs applies all categories. Saved recording units and
-full-rate data are unaffected.
-
-The maps contain only confirmed contacts. A no-contact hop cannot start a CV or
-produce a valid contact/current map value. Start with 1×1, then 2×2, during
-commissioning.
-
-## Scan hopping + I–t
-
-Motion, contact gating, path selection, retract behavior, map footprints, and
-duration interpretation match hopping CV. At each confirmed contact the method
-runs the initial/pulse/return program. The current map is the mean Current 1
-during the pulse hold. Use the per-hop I–t tab to inspect the latest surface
-program.
-
-## Move piezo
-
-Choose X, Y, or Z, a target in µm, and a positive speed in µm/s. Bounds come
-from Settings. The page deliberately distinguishes **commanded** position from
-**measured** input readback. Test small, slow moves with ample clearance before
-approach work. Stopping a real FPGA move retires the uncertain program stream;
-reinitialize and reconnect before another command.
+Use physical inhibits/interlocks if software cannot establish a safe state.
+FPGA reinitialization itself changes outputs; withdraw/prepare safely first.
 
 ## Recordings and analysis
 
-Completed experiments are saved automatically when that setting is enabled.
-When it is disabled, eChemTips asks whether to keep a completed experiment.
-Aborted and failed runs are retained with their terminal status for traceability.
-See [Recording data format](DATA_FORMAT.md) for exact semantics.
-
-Choose **Analysis → Open analysis app** (F6), or **Analyze last saved recording**,
-from control. Analysis runs in a separate process. You can also run
-`python run_analysis.py` or `echemtips-analysis` independently.
-The [Analysis workbench guide](ANALYSIS_GUIDE.md) covers signal exploration,
-time-window measurements and charge, CV overlays, physical hop maps, and exports.
-
-## Normal stop and recovery
-
-1. Prefer the method page's **Stop** for a controlled abort.
-2. Confirm that the UI reports the partial recording saved.
-3. On NI FPGA hardware, disconnect/reinitialize and reconnect before another
-   command after cancellation.
-4. Use **EMERGENCY STOP** when continued output or motion may be unsafe.
-5. If software cannot establish a safe state, use the positioner/controller's
-   physical inhibit or power controls according to the laboratory procedure.
-   Never depend on the GUI as the only safety layer.
-
-
-## Scan orientation marker
-
-Both hopping scans enable **Add final orientation landing** by default. After
-all array points succeed, the probe retracts, moves to the marker, approaches
-using the same contact settings, repeats the same CV or I–t program (including
-cycles and settling), and returns toward Initial approach Z. An aborted scan
-does not start a marker. The marker itself requires confirmed or operator-accepted
-contact; reaching the approach limit does not authorize the electrochemistry.
-
-Automatic placement is the first X coordinate, one Y spacing beyond the final
-row in the scan direction. For a single Y row, the offset uses the X hop spacing.
-A single-point scan has no hop spacing: enter explicit marker coordinates or
-disable the marker. Footprint diameter does not affect placement or clearance.
-This extends one corner rather than the whole array. Explicit Marker X/Y values
-override automatic placement. Nonfinite coordinates, positions outside the piezo
-range, or positions inside/on the array block start; coordinates are never
-silently clamped. Verify the preview and physical separation before running.
-The trip to the marker uses normal retract distance plus the **Long-move extra retract**, even for serpentine scans. Duration estimates include the marker.
-
-The scan preview and exported `.orientation.svg` show landing order and X/Y
-orientation for later microscopy. Their positions are planned commanded values;
-consult the JSON for actual marker completion. Live traces still show marker
-activity for operator oversight, but the analysis app excludes it from all
-treatments, plots, maps and movies. A visible footprint is not guaranteed on
-every sample; confirm a suitable imaging contrast in a small test array first.
-
-
-## Approach + CV scan-rate series
-
-Find this experiment under **All experiments → Single-point** (search “scan
-rate”), then optionally pin it as a sidebar favorite.
-
-1. Configure the normal approach, absolute-current contact threshold, optional
-   XY preposition and settling time.
-2. Set shared start potential, vertex 1, vertex 2 and **Cycles per scan rate**.
-3. Enter scan rates in V/s, one row per rate. **Add rate**, **Remove**, **Move up**
-   and **Move down** control the list. Order is preserved and repeated rates are
-   allowed, for example 0.1 → 0.5 → 1 → 0.1 V/s to check changes over time.
-4. Review the displayed total cycles and estimated CV duration, and start.
-
-There is **one approach and one initial settling period**. After confirmed
-contact, all cycles at the first rate run, followed by all cycles at the next
-rate. Each cycle is start → vertex 1 → vertex 2 → start. The probe stays at
-contact between rates; there is no extra approach or settling between them.
-When enabled, retract to Start Z occurs once after the entire series. Stop and
-emergency-stop behavior use the existing Approach + CV controls.
-
-The live CV view clears at each new rate and labels the currently displayed
-rate. Full-rate recording retains the entire series. In analysis, complete CVs
-are labeled by rate-block number, scan rate and cycle within that block; repeated
-rate values remain distinct. A partial final CV is not presented as complete.
-Surface changes and elapsed contact time can influence a scan-rate comparison;
-the software does not assume the surface remains unchanged.
-
-The list supports 1–1000 rates, subject to 10,000 total cycles and existing FPGA
-line-tag/velocity limits. Hardware checks the complete mixed-rate waveform for
-representability before starting motion. No bitfile modification is required.
-
-
-## Linear sweep voltammetry (LSV)
-
-All CV pages also support one-way LSV: standalone CV, Approach + CV,
-Approach + CV scan-rate series, and scan hopping + CV. Find them by searching
-`LSV` in All experiments. Select **Waveform → LSV** in the potential controls.
-The second vertex and cycle count disappear. Set **Start potential**, **End
-potential**, and **Scan rate**; the preview shows Start → End. A decreasing end
-potential produces a negative-going sweep. Each landing/rate runs exactly one
-sweep, without a reverse ramp.
-
-The end potential remains applied during retraction and at normal completion.
-For hopping scans, the next hop restores the approach potential after the
-previous retract. Changing potential or beginning another experiment changes
-this held value. Stop/emergency-stop behavior is unchanged.
-
-For an LSV scan-rate series, every rate runs Start → End. Between rates, E1
-**jumps** back to Start while the probe remains in contact. Choose **Settling
-at start between LSV rates** (zero is allowed). This potential jump may cause
-a charging transient and does not renew the droplet. Reset and settling data
-remain in raw traces but are excluded from the per-rate sweeps. The final
-rate holds End during the optional single final retract.
-
-Analysis uses the saved waveform type to recognize single sweeps in the existing
-CV/voltammetry tab. Potential/time and current/time views remain available.
-LSV maps and movies have only one segment, **LSV · Start → End**; there is no
-reverse branch or second cycle to select. Incomplete sweeps are not presented
-as complete measurements. Orientation-marker landings remain excluded.
-
-The native FPGA driver uses existing jump, hold and ramp waypoints; no bitfile
-change is required. Test the selected start/end potentials on your setup before
-surface experiments. A custom site driver must explicitly declare LSV support.
+Keep the CSV and matching JSON together. Completed, aborted and failed runs
+have distinct terminal statuses; partial data are retained for traceability.
+Use **Analysis → Open analysis app** (F6) or **Analyze last saved recording**.
+Analysis is a separate process and does not operate hardware.
+See [Analysis](ANALYSIS_GUIDE.md) and [Troubleshooting](TROUBLESHOOTING.md).

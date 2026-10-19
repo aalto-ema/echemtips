@@ -5,6 +5,15 @@ All notable changes to eChemTips are recorded here. The project follows
 
 ## Unreleased
 
+### Documentation
+
+- Consolidated the public guide into task-based installation, operation, analysis,
+  reference and developer sections. Instrument-specific examples, historical
+  audits and local Windows-kit instructions are no longer published.
+- Clarified compatible FPGA/analog-interface requirements without prescribing
+  amplifier or piezo brands; corrected magnitude-contact, optional adaptive tilt
+  and polarity-conversion explanations. Instrument behaviour is unchanged.
+
 ### Fixed
 
 - Navigation icons use explicit experiment assignments, so CV scan-rate series
@@ -202,5 +211,5 @@ All notable changes to eChemTips are recorded here. The project follows
 ### Added
 
 - Initial public eChemTips release with PySide6/PyQtGraph control and analysis
-  applications, deterministic simulation, NI USB-7856R host protocol support,
+  applications, deterministic simulation, NI R Series FPGA host protocol support,
   full-rate recording, CV/approach/I–t/hopping methods, and MIT license.
