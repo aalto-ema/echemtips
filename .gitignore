@@ -25,6 +25,10 @@ tmp/
 .vscode/
 .idea/
 
+# Code-signing credentials must never enter the repository.
+*.pfx
+*.p12
+
 # NI/LabVIEW sources and compiled targets are intentionally local-only.
 *.vi
 *.ctl

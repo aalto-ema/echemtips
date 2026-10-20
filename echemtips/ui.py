@@ -2210,7 +2210,7 @@ class EChemTipsApp(QtWidgets.QMainWindow):
 
     def launch_analysis(self, *, last_recording: bool = False, path: Path | None = None) -> None:
         """Launch an independent analysis process without touching instrument state."""
-        arguments = ["-m", "echemtips.analysis", "--data-folder", str(Path(self.settings.save_directory).expanduser().resolve())]
+        arguments = ["--data-folder", str(Path(self.settings.save_directory).expanduser().resolve())]
         if last_recording:
             path = self.recorder.output_path
             if self.recorder.active or path is None or not path.exists():
@@ -2225,12 +2225,11 @@ class EChemTipsApp(QtWidgets.QMainWindow):
                 self.show_error('The recording no longer exists at this location.')
                 return
             arguments.append(str(path))
-        executable = Path(sys.executable)
-        if sys.platform == "win32" and executable.with_name("pythonw.exe").exists():
-            executable = executable.with_name("pythonw.exe")
-        started, _pid = QtCore.QProcess.startDetached(str(executable), arguments, str(Path(__file__).resolve().parent.parent))
+        from .desktop_launcher import analysis_command
+        executable, arguments, working_directory = analysis_command(arguments)
+        started, _pid = QtCore.QProcess.startDetached(executable, arguments, working_directory)
         if not started:
-            self.show_error("Could not launch analysis. Run python -m echemtips.analysis in this environment.")
+            self.show_error("Could not launch analysis. Try the eChemTips Analysis shortcut or check the installation.")
 
     def _make_experiments(self) -> None:
         self.experiment = ApproachCVExperiment(self.backend, self.settings); self.scan_experiment = ScanHoppingCVExperiment(self.backend, self.settings); self.cv_experiment = CVExperiment(self.backend, self.settings)
@@ -2248,6 +2247,9 @@ class EChemTipsApp(QtWidgets.QMainWindow):
             nav = button(name.replace('I-t', 'I–t'), lambda checked=False, page=name: self.show_page(page))
             from .navigation_icons import navigation_icon
             nav.setIcon(navigation_icon(name, sidebar=True)); nav.setIconSize(QtCore.QSize(20, 20))
+            nav.setAccessibleName(name.replace('I-t', 'I–t'))
+            entry = next(entry for entry in EXPERIMENTS if entry.name == name)
+            nav.setToolTip(entry.description)
             nav.setParent(sidebar); nav.setProperty("role", "nav"); nav.setCheckable(True)
             self.nav_group.addButton(nav); self.nav_buttons[name] = nav
         side.addWidget(self.nav_buttons["Move piezo"])
@@ -2260,6 +2262,8 @@ class EChemTipsApp(QtWidgets.QMainWindow):
         side.addWidget(self.favorite_scroll, 1)
         self.library_button = button("All experiments…", self.open_library)
         self.library_button.setIcon(navigation_icon('All experiments'))
+        self.library_button.setAccessibleName('All experiments and tools')
+        self.library_button.setToolTip('Search all experiments and choose sidebar favourites (Ctrl+K).')
         side.addWidget(self.library_button)
         side.addWidget(self.nav_buttons["Settings"])
         self._refresh_favorites()

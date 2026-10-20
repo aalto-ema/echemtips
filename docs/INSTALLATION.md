@@ -12,6 +12,36 @@ replacement has passed the same checks.
 
 ## Install from source
 
+### Windows installer previews
+
+The **Windows application preview** GitHub Actions workflow produces a per-user
+x64 installer with bundled Python, Control/Analysis Start-menu shortcuts,
+optional desktop shortcuts and an optional **Open with** entry for CSV recordings.
+It does not take over the default CSV application. No Python or terminal is needed
+on the target computer. The initial target is **Windows 11 x64**.
+
+Until a signed release is published, these are **unsigned test artifacts**, not
+commissioned instrument distributions. Obtain them only from this repository's
+successful workflow runs; compare the supplied SHA-256 checksums. Unsigned builds
+can trigger SmartScreen. Do not disable security controls blindly.
+
+Settings in `%APPDATA%\eChemTips` and recordings survive upgrades/uninstall.
+New relative data paths resolve under `Documents\eChemTips`, not the application
+folder. Existing settings are reused: review relative data-folder paths when moving
+from a source checkout, and select an absolute recording directory. Close both apps
+before upgrading; the installer will not replace a running installed application.
+Updates are manual, never downloaded or applied during an experiment.
+
+NI native drivers/NI MAX and a compatible private bitfile remain separate; see
+[hardware setup](REAL_HARDWARE_SETUP.md). MP4 export in this bundle requires an
+externally installed FFmpeg executable on `PATH` or `IMAGEIO_FFMPEG_EXE`; no FFmpeg
+executable is redistributed. USB picomotor SDK integration is not bundled yet.
+Exact versions and dependency licenses are available via **About → Bundled licenses**.
+Maintainer build/signing and acceptance checks are in
+[Contributing](https://github.com/aalto-ema/echemtips/blob/main/CONTRIBUTING.md#windows-application-builds).
+
+### Source installation (all supported platforms)
+
 Download/extract the repository from
 [GitHub](https://github.com/aalto-ema/echemtips), or clone it:
 

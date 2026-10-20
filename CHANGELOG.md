@@ -1,5 +1,16 @@
 # Changelog
 
+## Desktop distribution and identity (2026-10-20)
+
+- Applied operator-approved vector logo C, with shared control/analysis/About identity,
+  multi-size Windows/macOS icons and MIT source artwork (#15).
+- Unified navigation icon grammar and distinguished workflow/measurement variants,
+  including non-spatial scan-rate series; retained labels and accessible names (#16).
+- Added a hash-locked Windows x64 application/installer build, per-user shortcuts,
+  opt-in recording association, source/license inventory and frozen simulation checks.
+  Fixed Analysis launching from the bundled executable. Unsigned previews are not
+  a commissioned release; certificate signing and clean-host validation remain (#14).
+
 All notable changes to eChemTips are recorded here. The project follows
 [Semantic Versioning](https://semver.org/) while its public API is pre-1.0.
 

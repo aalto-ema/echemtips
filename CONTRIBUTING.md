@@ -18,7 +18,7 @@ python3 -m venv .venv
 source .venv/bin/activate          # Windows: .venv\Scripts\Activate.ps1
 python -m pip install --upgrade pip
 python -m pip install -e ".[analysis]"
-python -m unittest discover -v
+python -m unittest discover -s tests -v
 python run_echemtips.py --smoke-test
 python run_analysis.py --smoke-test
 ```
@@ -130,3 +130,66 @@ Bug reports should include the eChemTips commit, platform and Python version,
 backend, experiment, exact message, minimal reproduction, and recording status.
 For hardware reports use the template in `docs/TROUBLESHOOTING.md`, removing
 private paths and data before posting publicly.
+
+## Windows application builds
+
+The repository has a separate **Windows application preview** workflow.
+It builds on Windows, not by cross-compiling a macOS environment. Runtime/build
+wheels are pinned with SHA-256 hashes in `packaging/windows/requirements.lock`;
+GitHub Actions are pinned to release commits. This fixes dependency inputs, not
+byte-for-byte executable reproducibility (timestamps and code signing vary).
+
+Build in a clean Windows 11 x64 CPython **3.13.16** virtual environment:
+
+```powershell
+python -m pip install --require-hashes --only-binary=:all: -r packaging/windows/requirements.lock
+python -m pip install --no-deps --no-build-isolation .
+python -m pip check
+python scripts/build_windows_app.py --output build/windows-preview
+```
+
+Inno Setup 6 (`ISCC.exe`, default standard installation path) is required to build
+the installer. GitHub's Windows runner provides it; install it separately for a
+local build, or pass `--iscc` with its full path. A clean committed tree is required;
+artifacts go to a fresh output directory. No local data, bitfiles or SDKs are copied.
+The artifact contains the installer, exact Git source archive, version/license
+inventory, frozen simulation check and checksums. PyInstaller uses one-folder
+deployment with replaceable Qt DLLs, not static Qt linkage. Both shortcuts use the
+same executable, with `--analysis` dispatch; recording paths with spaces remain
+separate arguments. There are no silent automatic updates.
+
+Signing is **not configured in CI**. A release maintainer with a suitable trusted
+code-signing certificate in the Windows certificate store and `signtool` on PATH
+can explicitly add:
+
+```powershell
+python scripts/build_windows_app.py --output build/windows-signed --certificate-thumbprint CERTIFICATE_SHA1_THUMBPRINT --timestamp-url https://YOUR_CERTIFICATE_AUTHORITY_TIMESTAMP_SERVICE
+```
+
+This signs/verifies the app and requests signed installer/uninstaller generation.
+Never commit certificates, PFX files or passwords. Choose certificate ownership,
+protected signing infrastructure and release hosting separately. Public release
+publication is intentionally manual. Do not describe unsigned previews as signed.
+Before distributing, review third-party notices, LGPL library-replacement and
+corresponding-source obligations for the precise versions in `build.json`.
+FFmpeg executables, proprietary drivers, FPGA images and controller SDKs are excluded.
+
+### Windows acceptance checklist
+
+CI checks frozen imports, all pages, a two-landing simulation, the transient solver,
+per-user install/upgrade/uninstall with spaces, shortcuts, opt-in file association,
+high-DPI offscreen rendering and preservation of an existing settings-file sentinel.
+These automated checks do **not** replace clean physical Windows validation:
+
+- Install without Python/LabVIEW/NI present; run Control and Analysis from shortcuts.
+- Use 100%, 150% and 200% scaling; inspect plots, dialogs and icons on a laptop.
+- Record a small simulated scan in a path with spaces; open its CSV via **Open with**,
+  drag/drop, and F6 from Control, then export a figure and reopen the recording.
+- Upgrade with an existing real settings/navigation profile; compare values and data.
+- Confirm installer refuses replacement while either installed app is running.
+- Uninstall; verify settings/calibration/recordings remain and shortcuts/association go.
+- Verify signatures and publisher for a signed build; test offline installation.
+- Only after NI drivers and a compatible private bitfile are commissioned, perform
+  the separate hardware checks. CI never opens NI sessions.
+
+Keep issue #14 open until signing and clean-host operator checks have evidence.

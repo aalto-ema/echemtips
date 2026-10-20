@@ -1,0 +1,79 @@
+name: Windows application preview
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ["echemtips/**", "packaging/windows/**", "scripts/build_windows_app.py", "scripts/export_app_icons.py", "pyproject.toml", ".github/workflows/windows-app.yml"]
+  pull_request:
+    paths: ["echemtips/**", "packaging/windows/**", "scripts/build_windows_app.py", "scripts/export_app_icons.py", "pyproject.toml", ".github/workflows/windows-app.yml"]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: windows-app-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: windows-2025
+    timeout-minutes: 30
+    env:
+      QT_QPA_PLATFORM: offscreen
+      PYTHONUTF8: "1"
+      PYTHONPATH: tests;.
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.13.16"
+          architecture: x64
+          cache: pip
+          cache-dependency-path: packaging/windows/requirements.lock
+      - name: Install hash-locked build and runtime wheels
+        run: |
+          python -m pip install --require-hashes --only-binary=:all: -r packaging/windows/requirements.lock
+          python -m pip install --no-deps --no-build-isolation .
+          python -m pip check
+      - name: Test desktop contracts
+        run: python -m unittest tests.test_installed_desktop tests.test_branding_assets tests.test_navigation tests.test_about tests.test_desktop tests.test_documentation -q
+      - name: Build and exercise frozen application
+        run: python scripts/build_windows_app.py --output build/windows-preview
+      - name: Test per-user install, upgrade, shortcuts and uninstall with spaces
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $installer = (Get-ChildItem build/windows-preview/artifacts/*-setup.exe).FullName
+          $destination = Join-Path $env:LOCALAPPDATA 'Programs/eChemTips CI with spaces'
+          $profile = Join-Path $env:APPDATA 'eChemTips'
+          New-Item -ItemType Directory -Force $profile | Out-Null
+          $sentinel = Join-Path $profile 'installer-preservation-test.txt'
+          Set-Content $sentinel 'preserve user settings and recordings'
+          $oldDefault = (Get-ItemProperty 'HKCU:\Software\Classes\.csv' -ErrorAction SilentlyContinue).'(default)'
+          $arguments = @('/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART', "/DIR=`"$destination`"", '/TASKS=desktopicon,recordings')
+          $process = Start-Process $installer -ArgumentList $arguments -Wait -PassThru
+          if ($process.ExitCode -ne 0) { throw "Installer failed: $($process.ExitCode)" }
+          $env:QT_SCALE_FACTOR = '1.5'
+          $report = Join-Path $env:GITHUB_WORKSPACE 'build/windows-preview/artifacts/installed-high-dpi-check.json'
+          $process = Start-Process (Join-Path $destination 'eChemTips.exe') -ArgumentList @('--package-check', "`"$report`"") -Wait -PassThru
+          if ($process.ExitCode -ne 0 -or !(Test-Path $report)) { throw 'Installed application check failed' }
+          $shell = New-Object -ComObject WScript.Shell
+          $link = Join-Path ([Environment]::GetFolderPath('StartMenu')) 'Programs/eChemTips/eChemTips Analysis.lnk'
+          $shortcut = $shell.CreateShortcut($link)
+          if ($shortcut.Arguments -ne '--analysis' -or $shortcut.TargetPath -ne (Join-Path $destination 'eChemTips.exe')) { throw 'Analysis shortcut is invalid' }
+          $newDefault = (Get-ItemProperty 'HKCU:\Software\Classes\.csv' -ErrorAction SilentlyContinue).'(default)'
+          if ($newDefault -ne $oldDefault) { throw 'Installer took over default CSV association' }
+          $process = Start-Process $installer -ArgumentList $arguments -Wait -PassThru
+          if ($process.ExitCode -ne 0) { throw 'In-place upgrade failed' }
+          $process = Start-Process (Join-Path $destination 'unins000.exe') -ArgumentList @('/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART') -Wait -PassThru
+          if ($process.ExitCode -ne 0) { throw 'Uninstall failed' }
+          if (!(Test-Path $sentinel) -or (Get-Content $sentinel) -ne 'preserve user settings and recordings') { throw 'Uninstall modified user data' }
+          if (Test-Path 'HKCU:\Software\Classes\eChemTips.Recording') { throw 'Uninstall left its file association' }
+      - name: Upload unsigned preview (not a release)
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: echemtips-windows-preview-${{ github.sha }}
+          path: build/windows-preview/artifacts/
+          retention-days: 14
+          if-no-files-found: error
