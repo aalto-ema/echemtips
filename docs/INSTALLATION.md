@@ -10,7 +10,7 @@ The package minimum is not a guarantee that every Python/OS/driver combination
 has been hardware-tested. Retain an existing commissioned environment until a
 replacement has passed the same checks.
 
-## Install from source
+## Choose an installation
 
 ### Windows installer previews
 
@@ -53,7 +53,7 @@ cd echemtips
 Open a terminal **inside the extracted repository**. Create a local environment;
 activation is not required.
 
-### Windows (PowerShell)
+#### Windows (PowerShell)
 
 Install a supported 64-bit Python from [python.org](https://www.python.org/downloads/).
 The following uses the Python launcher; substitute the full path to your
@@ -65,7 +65,7 @@ py -m venv .venv
 .\.venv\Scripts\python.exe run_echemtips.py
 ```
 
-### macOS / Linux
+#### macOS / Linux
 
 ```sh
 python3 -m venv .venv
