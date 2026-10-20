@@ -30,7 +30,8 @@ class AboutDialog(QtWidgets.QDialog):
         super().__init__(parent)
         self.setWindowTitle("About eChemTips")
         self.setModal(False)
-        self.resize(560, 480)
+        self.resize(600, 520)
+        self.setMinimumSize(440, 380)
         layout = QtWidgets.QVBoxLayout(self)
         layout.setContentsMargins(24, 24, 24, 20)
         layout.setSpacing(16)
@@ -39,32 +40,50 @@ class AboutDialog(QtWidgets.QDialog):
         title = QtWidgets.QLabel(f"<h2>eChemTips</h2>Version {__version__}")
         heading.addWidget(title, 1)
         layout.addLayout(heading)
+        self.tabs = QtWidgets.QTabWidget()
+        self.tabs.setAccessibleName("About eChemTips information")
         self.text = QtWidgets.QTextBrowser()
-        self.text.setOpenExternalLinks(True)
-        self.text.setFrameShape(QtWidgets.QFrame.Shape.NoFrame)
+        self.text.setAccessibleName("eChemTips overview and support links")
         self.text.setHtml(
-            "<p>Instrument control and data analysis for scanning electrochemical "
-            "cell microscopy (SECCM).</p>"
+            "<p>Open Python software for instrument control, experiment workflows "
+            "and data analysis in scanning electrochemical cell microscopy (SECCM).</p>"
+            "<p>Set up measurements, follow live traces and maps, and explore recordings "
+            "in the companion analysis app. Workflows include CV/LSV, current–time "
+            "measurements, hopping scans, and adaptive and combinatorial experiments. "
+            "Simulation lets you explore the software without connecting an instrument.</p>"
+            "<p>Developed in the <b>Electrochemical Materials and Applications group "
+            "at Aalto University</b>, with contributions and feedback from the community.</p>"
+            "<h3>Documentation and community</h3>"
+            f'<p><a href="{DOCUMENTATION_URL}">User and developer documentation</a><br>'
+            f'<a href="{SUPPORT_URL}">Report a bug or suggest a feature</a><br>'
+            f'<a href="{REPOSITORY_URL}">Source code and contributions</a></p>'
+            f'<p>Open source under the <a href="{REPOSITORY_URL}/blob/main/LICENSE">MIT license</a>. '
+            'See Credits and licenses for acknowledgements and dependency information.</p>'
+        )
+        self.credits = QtWidgets.QTextBrowser()
+        self.credits.setAccessibleName("Acknowledgements, references and licenses")
+        self.credits.setHtml(
             "<h3>Acknowledgements</h3>"
-            "<p>Built on the workflows and FPGA host protocol of Warwick Electrochemical "
-            "Scanning Probe Microscopy (WEC-SPM). We thank its developers at the "
-            "University of Warwick and their collaborators for this foundation. "
+            "<p>The FPGA host protocol and workflows build on WEC-SPM "
+            "(Warwick Electrochemical Scanning Probe Microscopy, University of Warwick "
+            "and collaborators). We thank its developers. "
             "eChemTips is an independent project, not an official Warwick release.</p>"
             f'<p><a href="{WEC_URL}">WEC-SPM and original software requests</a><br>'
             f'<a href="{PAPER_URL}">A Look inside a Flexible Open-Source Scanning '
             'Electrochemical Probe Microscope</a></p>'
             "<p>Made possible by the Python, NumPy, SciPy, PySide6, PyQtGraph and "
             "NI FPGA Python communities, and everyone testing and contributing to eChemTips.</p>"
-            "<h3>Documentation and support</h3>"
-            f'<p><a href="{DOCUMENTATION_URL}">User and developer documentation</a><br>'
-            f'<a href="{SUPPORT_URL}">Report a bug or request a feature</a><br>'
-            f'<a href="{REPOSITORY_URL}">Source code and contributions</a></p>'
+            "<h3>Licensing</h3>"
             f'<p>eChemTips is released under the <a href="{REPOSITORY_URL}/blob/main/LICENSE">'
-            'MIT license</a>. Dependencies and the original WEC-SPM software have their own licenses.</p>'
+            'MIT license</a>. Dependencies and the original platform software have separate licenses.</p>'
             '<p>Qt/PySide6 is used under its open-source license terms. '
             '<a href="https://www.qt.io/development/open-source-lgpl-obligations">Qt licensing and library replacement</a>.</p>'
         )
-        layout.addWidget(self.text, 1)
+        for browser, caption in ((self.text, "Overview"), (self.credits, "Credits and licenses")):
+            browser.setOpenExternalLinks(True)
+            browser.setFrameShape(QtWidgets.QFrame.Shape.NoFrame)
+            self.tabs.addTab(browser, caption)
+        layout.addWidget(self.tabs, 1)
         actions = QtWidgets.QHBoxLayout()
         self.copy_button = QtWidgets.QPushButton("Copy version details")
         self.copy_button.setToolTip("Copy app, Python, Qt and operating-system versions for a support report.")

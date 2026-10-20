@@ -2,6 +2,9 @@
 
 ## Desktop distribution and identity (2026-10-20)
 
+- Reorganized About into an eChemTips-focused overview and a separate credits/license
+  tab, retaining documentation, support and platform/reference links.
+
 - Applied operator-approved vector logo C, with shared control/analysis/About identity,
   multi-size Windows/macOS icons and MIT source artwork (#15).
 - Unified navigation icon grammar and distinguished workflow/measurement variants,
