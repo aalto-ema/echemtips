@@ -20,6 +20,12 @@ optional desktop shortcuts and an optional **Open with** entry for CSV recording
 It does not take over the default CSV application. No Python or terminal is needed
 on the target computer. The initial target is **Windows 11 x64**.
 
+To try a preview, open the repository's **Actions → Windows application preview**,
+choose a successful run, and download its `echemtips-windows-preview-…` artifact
+(GitHub sign-in is usually required). Extract the ZIP and run the `…-setup.exe`,
+not the separate source-code ZIP. Then use **eChemTips Control** or **eChemTips
+Analysis** from the Start menu. Test Simulation before adding any hardware setup.
+
 Until a signed release is published, these are **unsigned test artifacts**, not
 commissioned instrument distributions. Obtain them only from this repository's
 successful workflow runs; compare the supplied SHA-256 checksums. Unsigned builds
