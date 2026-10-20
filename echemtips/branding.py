@@ -3,7 +3,7 @@
 from functools import lru_cache
 from importlib.resources import files
 
-from PySide6 import QtCore, QtGui, QtWidgets
+from PySide6 import QtCore, QtGui, QtWidgets, QtSvg
 
 from . import __version__
 
@@ -11,14 +11,18 @@ from . import __version__
 @lru_cache(maxsize=1)
 def application_icon() -> QtGui.QIcon:
     """Load the packaged logo after QApplication exists, independent of cwd."""
-    image = QtGui.QPixmap()
-    resource = files("echemtips").joinpath("assets", "echemtips-logo.png")
-    if not image.loadFromData(resource.read_bytes(), "PNG"):
-        raise RuntimeError("The packaged eChemTips logo could not be decoded.")
+    resource = files("echemtips").joinpath("assets", "echemtips-logo.svg")
+    renderer = QtSvg.QSvgRenderer(resource.read_bytes())
+    if not renderer.isValid():
+        raise RuntimeError("The packaged eChemTips vector logo could not be decoded.")
     icon = QtGui.QIcon()
     for size in (16, 24, 32, 48, 64, 128, 256, 512):
-        icon.addPixmap(image.scaled(size, size, QtCore.Qt.AspectRatioMode.KeepAspectRatio,
-                                    QtCore.Qt.TransformationMode.SmoothTransformation))
+        image = QtGui.QPixmap(size, size)
+        image.fill(QtCore.Qt.GlobalColor.transparent)
+        painter = QtGui.QPainter(image)
+        renderer.render(painter)
+        painter.end()
+        icon.addPixmap(image)
     return icon
 
 
@@ -35,7 +39,7 @@ def logo_label(size: int = 36) -> QtWidgets.QLabel:
     """Create an accessible logo widget without showing an unparented window."""
     widget = QtWidgets.QLabel()
     widget.setObjectName("applicationLogo")
-    widget.setAccessibleName("eChemTips logo: pipette, meniscus and surface")
+    widget.setAccessibleName("eChemTips logo: pipette and electrochemical response")
     widget.setFixedSize(size, size)
     widget.setPixmap(application_icon().pixmap(size, size))
     return widget

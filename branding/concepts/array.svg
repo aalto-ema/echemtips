@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
+  <title>eChemTips concept B — spatial electrochemistry</title>
+  <rect width="128" height="128" rx="28" fill="#17324d"/>
+  <path d="M45 21h38L68 65h-8Z" fill="#fff"/>
+  <path d="M38 83h52v22H38" fill="none" stroke="#6fe0c9" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+  <g fill="#fff"><circle cx="38" cy="83" r="6"/><circle cx="64" cy="83" r="6"/><circle cx="90" cy="83" r="6"/><circle cx="38" cy="105" r="6"/><circle cx="64" cy="105" r="6"/><circle cx="90" cy="105" r="6"/></g>
+</svg>

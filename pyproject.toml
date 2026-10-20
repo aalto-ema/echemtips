@@ -53,4 +53,4 @@ Issues = "https://github.com/aalto-ema/echemtips/issues"
 include = ["echemtips*"]
 
 [tool.setuptools.package-data]
-echemtips = ["assets/*.png"]
+echemtips = ["assets/*.png", "assets/*.svg", "assets/*.ico", "assets/*.icns"]

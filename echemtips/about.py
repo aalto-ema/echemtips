@@ -1,6 +1,7 @@
 """Shared, nonmodal About dialog and help links for both desktop applications."""
 import platform
 import sys
+from pathlib import Path
 
 from PySide6 import QtCore, QtGui, QtWidgets
 
@@ -60,6 +61,8 @@ class AboutDialog(QtWidgets.QDialog):
             f'<a href="{REPOSITORY_URL}">Source code and contributions</a></p>'
             f'<p>eChemTips is released under the <a href="{REPOSITORY_URL}/blob/main/LICENSE">'
             'MIT license</a>. Dependencies and the original WEC-SPM software have their own licenses.</p>'
+            '<p>Qt/PySide6 is used under its open-source license terms. '
+            '<a href="https://www.qt.io/development/open-source-lgpl-obligations">Qt licensing and library replacement</a>.</p>'
         )
         layout.addWidget(self.text, 1)
         actions = QtWidgets.QHBoxLayout()
@@ -67,6 +70,12 @@ class AboutDialog(QtWidgets.QDialog):
         self.copy_button.setToolTip("Copy app, Python, Qt and operating-system versions for a support report.")
         self.copy_button.clicked.connect(self.copy_details)
         actions.addWidget(self.copy_button)
+        licenses = Path(__file__).resolve().parent.parent / 'release-metadata'
+        if licenses.is_dir():
+            license_button = QtWidgets.QPushButton('Bundled licenses')
+            license_button.setToolTip('Open local dependency license texts and exact build versions.')
+            license_button.clicked.connect(lambda: QtGui.QDesktopServices.openUrl(QtCore.QUrl.fromLocalFile(str(licenses))))
+            actions.addWidget(license_button)
         actions.addStretch(1)
         close = QtWidgets.QPushButton("Close")
         close.setDefault(True)

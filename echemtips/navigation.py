@@ -85,6 +85,7 @@ class ExperimentLibrary(QtWidgets.QDialog):
         self.category.addItems(["All categories", *dict.fromkeys(e.category for e in EXPERIMENTS)])
         layout.addWidget(self.search); layout.addWidget(self.category)
         self.results = QtWidgets.QTreeWidget()
+        self.results.setAccessibleName('Experiment library and sidebar favourites')
         self.results.setHeaderLabels(["Experiment / tool", "Category", "Sidebar"])
         self.results.setRootIsDecorated(False)
         self.results.setStyleSheet("QTreeWidget::item { padding: 4px 2px; }")
@@ -131,6 +132,8 @@ class ExperimentLibrary(QtWidgets.QDialog):
             item = QtWidgets.QTreeWidgetItem([entry.name.replace("I-t", "I–t"), entry.category, pinned])
             from .navigation_icons import navigation_icon
             item.setIcon(0, navigation_icon(entry.name))
+            item.setToolTip(0, entry.description)
+            item.setData(0, QtCore.Qt.ItemDataRole.AccessibleTextRole, entry.name.replace('I-t', 'I–t'))
             item.setData(0, QtCore.Qt.ItemDataRole.UserRole, entry.name)
             self.results.addTopLevelItem(item)
             if entry.name == selected:
