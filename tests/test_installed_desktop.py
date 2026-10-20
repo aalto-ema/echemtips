@@ -8,7 +8,7 @@ import unittest
 from unittest.mock import patch
 
 from echemtips.desktop_launcher import analysis_command, prepare_runtime
-from scripts.build_windows_app import version, write_metadata
+from scripts.build_windows_app import version, write_metadata, validate_payload
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -68,6 +68,19 @@ class InstalledDesktopTests(unittest.TestCase):
             ast.parse((output/'version-info.txt').read_text())
             self.assertTrue((output/'LICENSE-eChemTips.txt').exists())
             self.assertIn('example-revision', (output/'build.json').read_text())
+
+    def test_payload_refuses_private_bitfiles_credentials_and_external_binaries(self):
+        with tempfile.TemporaryDirectory() as folder:
+            bundle = Path(folder)
+            (bundle/'eChemTips.exe').touch()
+            validate_payload(bundle)
+            for name in ('target.lvbitx', 'key.pfx', 'NiFpga.dll', 'ffmpeg-win64.exe'):
+                with self.subTest(name=name):
+                    path = bundle/name
+                    path.touch()
+                    with self.assertRaises(ValueError):
+                        validate_payload(bundle)
+                    path.unlink()
 
 
 if __name__ == '__main__':

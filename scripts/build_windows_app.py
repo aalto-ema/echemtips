@@ -82,6 +82,16 @@ def write_metadata(destination: Path, revision: str) -> None:
     (destination / 'version-info.txt').write_text(info, encoding='utf-8')
 
 
+def validate_payload(bundle: Path) -> None:
+    """Reject private artifacts and excluded native executables before packaging."""
+    for path in bundle.rglob('*'):
+        name = path.name.lower()
+        if path.is_file() and (path.suffix.lower() in {'.lvbitx', '.vi', '.ctl', '.pfx', '.p12'} or
+                               name in {'nifpga.dll', 'nifpgalv.dll'} or
+                               (name.startswith('ffmpeg') and path.suffix.lower() == '.exe')):
+            raise ValueError(f'Excluded private/native artifact in bundle: {path.relative_to(bundle)}')
+
+
 def build(output: Path, iscc: str, certificate: str | None = None,
           timestamp_url: str | None = None) -> None:
     """Build only on Windows, preserving user files and refusing stale outputs."""
@@ -98,6 +108,10 @@ def build(output: Path, iscc: str, certificate: str | None = None,
     dirty = subprocess.check_output(['git', 'diff', 'HEAD', '--'], cwd=ROOT)
     if dirty:
         raise ValueError('Commit tracked source changes before building a release.')
+    untracked = subprocess.check_output(['git', 'ls-files', '--others', '--exclude-standard', '--',
+                                         'echemtips', 'packaging/windows', 'scripts'], cwd=ROOT)
+    if untracked:
+        raise ValueError('Untracked files in application/build source must be reviewed before bundling.')
     revision = subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=ROOT, text=True).strip()
     output.mkdir(parents=True)
     metadata = output / 'metadata'
@@ -107,6 +121,7 @@ def build(output: Path, iscc: str, certificate: str | None = None,
          '--distpath', output / 'app', '--workpath', output / 'work',
          ROOT / 'packaging/windows/echemtips.spec'], env=environment)
     bundle = output / 'app/eChemTips'
+    validate_payload(bundle)
     executable = bundle / 'eChemTips.exe'
     if certificate:
         run(['signtool', 'sign', '/sha1', certificate, '/fd', 'SHA256',
